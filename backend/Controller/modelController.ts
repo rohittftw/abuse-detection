@@ -182,3 +182,4 @@ export const fetchTweetsByHashtag = async (hashtag: string, maxResults: number =
     
     throw new Error(`Error fetching tweets: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+}
