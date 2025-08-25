@@ -1,13 +1,21 @@
 import React from 'react'
 import './App.css'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { DetectionPage } from './screens/DetectionPage/DetectionPage'
 import { Hero } from './components/Hero'
-import { BrowserRouter } from 'react-router-dom'
+import { AboutPage } from './screens/AboutPage/AboutPage'
+import { AnalysisPage } from './screens/AnalysisPage/AnalysisPage'
 
 function App() {
   return (
     <BrowserRouter>
       <div className="App">
-        <Hero />
+        <Routes>
+          <Route path="/" element={<Hero />} />
+          <Route path="/detection" element={<DetectionPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/analysis" element={<AnalysisPage />} />
+        </Routes>
       </div>
     </BrowserRouter>
   )
