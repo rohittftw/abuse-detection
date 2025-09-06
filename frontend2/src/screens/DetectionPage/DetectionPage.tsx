@@ -60,7 +60,6 @@ export const DetectionPage = (): React.JSX.Element => {
   const [analysisResults, setAnalysisResults] = useState<AnalysisResults | null>(null);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [dataSource, setDataSource] = useState<'twitter' | 'database'>('twitter');
   const [showIndividualTweets, setShowIndividualTweets] = useState(false);
   const [recentSessions, setRecentSessions] = useState<any[]>([]);
   const [selectedSession, setSelectedSession] = useState<any>(null);
@@ -481,7 +480,7 @@ export const DetectionPage = (): React.JSX.Element => {
                   type="text"
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
-                  placeholder={dataSource === 'database' ? "e.g., India, climate, election..." : "e.g., #India lang:en, climate change..."}
+                  placeholder="e.g., #India lang:en, climate change..."
                   className="flex-1 px-4 py-3 border border-[#dfdeda] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b3a39] focus:border-transparent text-sm sm:text-base"
                   disabled={isProcessing}
                 />
@@ -850,8 +849,34 @@ export const DetectionPage = (): React.JSX.Element => {
             </div>
           </div>
 
-          {/* Search History Sidebar */}
-   
+          {/* Search History */}
+          {searchHistory.length > 0 && (
+            <div className="mt-8">
+              <div className="bg-white rounded-lg border border-[#dfdeda] shadow">
+                <div className="p-4 sm:p-6">
+                  <h3 className="text-lg font-bold [font-family:'Lexend_Deca',Helvetica] text-[#3b3a39] mb-4">
+                    Recent Searches
+                  </h3>
+                  <div className="space-y-2">
+                    {searchHistory.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 border border-[#dfdeda] rounded-lg hover:bg-[#f4f2ee]">
+                        <div>
+                          <div className="font-medium text-[#3b3a39]">{item.keyword}</div>
+                          <div className="text-xs text-[#6e6d6b]">{item.timestamp}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm text-[#3b3a39]">{item.tweetsCount} tweets</div>
+                          <div className={`text-xs px-2 py-1 rounded ${getRiskColor(item.riskLevel)}`}>
+                            {item.riskLevel.toUpperCase()}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           
         </div>
       </main>
