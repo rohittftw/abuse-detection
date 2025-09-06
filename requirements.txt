@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+transformers
+torch
+pydantic
+python-multipart
+emoji>=2.0.0
+regex
+numpy
+pandas
+unicodedata2
+python-dotenv
