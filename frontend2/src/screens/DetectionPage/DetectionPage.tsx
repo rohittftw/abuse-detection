@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { API_ENDPOINTS } from "../../config/api";
 
 export const DetectionPage = (): React.JSX.Element => {
   type RiskLevel = 'low' | 'medium' | 'high';
@@ -96,7 +97,7 @@ export const DetectionPage = (): React.JSX.Element => {
   const fetchRecentSessions = async () => {
     setLoadingSessions(true);
     try {
-      const response = await fetch('http://localhost:3001/api/sessions', {
+      const response = await fetch(API_ENDPOINTS.SESSIONS, {
         method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -126,7 +127,7 @@ export const DetectionPage = (): React.JSX.Element => {
     setSelectedSession(null);
 
     try {
-      const response = await fetch(`http://localhost:3001/api/sessions/${encodeURIComponent(sessionName)}/tweets`, {
+      const response = await fetch(API_ENDPOINTS.SESSION_TWEETS(sessionName), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -281,7 +282,7 @@ export const DetectionPage = (): React.JSX.Element => {
 
      
       // Fetch real tweets from Twitter API
-      const response = await fetch('http://localhost:3001/api/fetch-tweets', {
+      const response = await fetch(API_ENDPOINTS.FETCH_TWEETS, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
