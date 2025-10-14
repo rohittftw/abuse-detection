@@ -6,4 +6,6 @@ export const API_ENDPOINTS = {
   FETCH_TWEETS: `${API_BASE_URL}/api/fetch-tweets`,
   SESSIONS: `${API_BASE_URL}/api/sessions`,
   SESSION_TWEETS: (sessionName: string) => `${API_BASE_URL}/api/sessions/${encodeURIComponent(sessionName)}/tweets`,
+  REANALYZE_TWEET: (tweetId: string) => `${API_BASE_URL}/api/tweets/${tweetId}/reanalyze`,
+  REANALYZE_SESSION: (sessionName: string) => `${API_BASE_URL}/api/sessions/${encodeURIComponent(sessionName)}/reanalyze`,
 } as const;

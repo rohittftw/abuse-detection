@@ -5,6 +5,7 @@ import { DetectionPage } from './screens/DetectionPage/DetectionPage'
 import { Hero } from './components/Hero'
 import { AboutPage } from './screens/AboutPage/AboutPage'
 import { AnalysisPage } from './screens/AnalysisPage/AnalysisPage'
+import { ReportsPage } from './screens/ReportsPage/ReportsPage'
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Route path="/detection" element={<DetectionPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/analysis" element={<AnalysisPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
         </Routes>
       </div>
     </BrowserRouter>

@@ -1,25 +1,112 @@
 import axios from 'axios';
 import { TweetService } from '../services/tweetService';
+import { Tweet } from '../models/tweet';
 
-const PYTHON_ML_SERVICE_URL = process.env.PYTHON_ML_SERVICE_URL || 'http://localhost:8000';
+const HUGGINGFACE_API_TOKEN = process.env.HUGGINGFACE_API_TOKEN;
+if (!HUGGINGFACE_API_TOKEN) {
+  console.warn('HUGGINGFACE_API_TOKEN not set in environment variables. API requests may fail.');
+}
+
+const ABUSE_MODEL_ID = 'cardiffnlp/twitter-roberta-base-hate-latest';
+const SENTIMENT_MODEL_ID = 'cardiffnlp/twitter-roberta-base-sentiment-latest';
 
 export const predictAbuse = async (text: string) => {
   try {
-    const response = await axios.post(`${PYTHON_ML_SERVICE_URL}/predict-abuse`, { text });
-    return response.data;
+    console.log('Sending abuse detection request to Hugging Face:', {
+      model: ABUSE_MODEL_ID,
+      text: text.substring(0, 50) + '...' // Log first 50 chars for privacy
+    });
+
+    const response = await axios.post(
+      `https://api-inference.huggingface.co/models/${ABUSE_MODEL_ID}`,
+      { inputs: text },
+      {
+        headers: {
+          'Authorization': `Bearer ${HUGGINGFACE_API_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    console.log('Abuse detection response:', {
+      status: response.status,
+      data: response.data
+    });
+
+    // Transform the response to match the expected format
+    const result = response.data[0].map((item: any) => ({
+      label: item.label === 'HATE' ? 'HATE' : 'NOT_HATE',
+      score: item.score
+    }));
+
+    return { result };
   } catch (error) {
-    console.error('Error in predictAbuse:', error);
-    throw new Error('Error communicating with Python abuse model');
+    if (axios.isAxiosError(error)) {
+      console.error('Hugging Face API Error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          headers: {
+            ...error.config?.headers,
+            Authorization: 'Bearer [REDACTED]' // Don't log the actual token
+          }
+        }
+      });
+    } else {
+      console.error('Error in predictAbuse:', error);
+    }
+    throw new Error('Error communicating with Hugging Face abuse model');
   }
 };
 
 export const predictSentiment = async (text: string) => {
   try {
-    const response = await axios.post(`${PYTHON_ML_SERVICE_URL}/predict-sentiment`, { text });
-    return response.data;
+    console.log('Sending sentiment analysis request to Hugging Face:', {
+      model: SENTIMENT_MODEL_ID,
+      text: text.substring(0, 50) + '...' // Log first 50 chars for privacy
+    });
+
+    const response = await axios.post(
+      `https://api-inference.huggingface.co/models/${SENTIMENT_MODEL_ID}`,
+      { inputs: text },
+      {
+        headers: {
+          'Authorization': `Bearer ${HUGGINGFACE_API_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    console.log('Sentiment analysis response:', {
+      status: response.status,
+      data: response.data
+    });
+
+    // Transform the response to match the expected format
+    const result = response.data[0].map((item: any) => ({
+      label: item.label.toUpperCase(),
+      score: item.score
+    }));
+
+    return { result };
   } catch (error) {
-    console.error('Error in predictSentiment:', error);
-    throw new Error('Error communicating with Python sentiment model');
+    if (axios.isAxiosError(error)) {
+      console.error('Hugging Face API Error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          headers: {
+            ...error.config?.headers,
+            Authorization: 'Bearer [REDACTED]' // Don't log the actual token
+          }
+        }
+      });
+    } else {
+      console.error('Error in predictSentiment:', error);
+    }
+    throw new Error('Error communicating with Hugging Face sentiment model');
   }
 };
 
@@ -115,7 +202,12 @@ export const fetchTweetsByHashtag = async (
               username: user.username || "unknown",
               verified: user.verified || false,
             },
-            public_metrics: tweet.public_metrics || {},
+            public_metrics: {
+              likeCount: tweet.public_metrics?.like_count || 0,
+              retweetCount: tweet.public_metrics?.retweet_count || 0,
+              replyCount: tweet.public_metrics?.reply_count || 0,
+              quoteCount: tweet.public_metrics?.quote_count || 0
+            },
             lang: tweet.lang || "en",
             analysis: {
               sentiment: sentimentResult.result,
@@ -359,6 +451,67 @@ export const getAllSessionNames = async () => {
   }
 };
 
+// Re-analyze a single tweet and store history
+export const reanalyzeTweet = async (tweet: any) => {
+  try {
+    // Run new analysis
+    const [sentimentResult, abuseResult] = await Promise.all([
+      predictSentiment(tweet.text),
+      predictAbuse(tweet.text)
+    ]);
+
+    console.log('New analysis results:', { sentimentResult, abuseResult });
+
+    // Create new analysis result
+    const newAnalysis = {
+      sentiment: sentimentResult.result,
+      abuse: abuseResult.result,
+      risk_level: abuseResult.result[0]?.label.toUpperCase() === 'HATE' ? 'high' : 'low',
+      confidence: Math.max(
+        sentimentResult.result[0]?.score || 0,
+        abuseResult.result[0]?.score || 0
+      ),
+      analyzedAt: new Date(),
+      modelVersions: {
+        sentiment: SENTIMENT_MODEL_ID,
+        abuse: ABUSE_MODEL_ID
+      }
+    };
+
+    const updatedTweet = await Tweet.findOneAndUpdate(
+      { tweetId: tweet.tweetId },
+      {
+        $push: { analysisHistory: tweet.analysis }, // Store old analysis in history
+        $set: { analysis: newAnalysis } // Set new analysis as current
+      },
+      { new: true } // Return the updated document
+    ).lean(); // Convert to plain JavaScript object
+
+    if (!updatedTweet) {
+      throw new Error('Tweet not found after update');
+    }
+
+    return {
+      id: updatedTweet.tweetId,
+      text: updatedTweet.text,
+      created_at: updatedTweet.createdAt,
+      author: updatedTweet.author,
+      public_metrics: {
+        likeCount: updatedTweet.publicMetrics.likeCount || 0,
+        retweetCount: updatedTweet.publicMetrics.retweetCount || 0,
+        replyCount: updatedTweet.publicMetrics.replyCount || 0,
+        quoteCount: updatedTweet.publicMetrics.quoteCount || 0
+      },
+      lang: updatedTweet.lang,
+      analysis: newAnalysis,
+      analysisHistory: updatedTweet.analysisHistory || []
+    };
+  } catch (error) {
+    console.error('Error reanalyzing tweet:', error);
+    throw error;
+  }
+};
+
 // Re-analyze tweets from a session
 export const reanalyzeSessionTweets = async (sessionName: string) => {
   try {
@@ -385,27 +538,44 @@ export const reanalyzeSessionTweets = async (sessionName: string) => {
             })
           ]);
 
-          return {
-            id: tweet.tweetId,
-            text: tweet.text,
-            created_at: tweet.createdAt.toISOString(),
-            author: tweet.author,
-            public_metrics: {
-              retweet_count: tweet.publicMetrics.retweetCount,
-              like_count: tweet.publicMetrics.likeCount,
-              reply_count: tweet.publicMetrics.replyCount,
-              quote_count: tweet.publicMetrics.quoteCount
-            },
-            lang: tweet.lang,
-            analysis: {
-              sentiment: sentimentResult.result,
-              abuse: abuseResult.result,
-              risk_level: abuseResult.result[0]?.label === 'HATE' ? 'high' : 'low',
-              confidence: Math.max(
-                sentimentResult.result[0]?.score || 0,
-                abuseResult.result[0]?.score || 0
-              )
+          const newAnalysis = {
+            sentiment: sentimentResult.result,
+            abuse: abuseResult.result,
+            risk_level: abuseResult.result[0]?.label.toUpperCase() === 'HATE' ? 'high' : 'low',
+            confidence: Math.max(
+              sentimentResult.result[0]?.score || 0,
+              abuseResult.result[0]?.score || 0
+            ),
+            analyzedAt: new Date(),
+            modelVersions: {
+              sentiment: SENTIMENT_MODEL_ID,
+              abuse: ABUSE_MODEL_ID
             }
+          };
+
+          // Update the tweet in the database
+          const updatedTweet = await Tweet.findOneAndUpdate(
+            { tweetId: tweet.tweetId },
+            {
+              $push: { analysisHistory: tweet.analysis },
+              $set: { analysis: newAnalysis }
+            },
+            { new: true }
+          ).lean();
+
+          if (!updatedTweet) {
+            throw new Error('Tweet not found after update');
+          }
+
+          return {
+            id: updatedTweet.tweetId,
+            text: updatedTweet.text,
+            created_at: updatedTweet.createdAt,
+            author: updatedTweet.author,
+            public_metrics: updatedTweet.publicMetrics,
+            lang: updatedTweet.lang,
+            analysis: newAnalysis,
+            analysisHistory: updatedTweet.analysisHistory || []
           };
         } catch (error) {
           console.error('Error processing tweet:', error);
@@ -420,7 +590,8 @@ export const reanalyzeSessionTweets = async (sessionName: string) => {
               risk_level: 'unknown',
               confidence: 0,
               error: 'Analysis failed'
-            }
+            },
+            analysisHistory: []
           };
         }
       })

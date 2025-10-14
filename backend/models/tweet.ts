@@ -1,5 +1,25 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+// Interface for analysis result
+interface IAnalysisResult {
+  sentiment: {
+    label: string;
+    score: number;
+  }[];
+  abuse: {
+    label: string;
+    score: number;
+  }[];
+  riskLevel: 'low' | 'medium' | 'high' | 'unknown';
+  confidence: number;
+  analyzedAt: Date;
+  modelVersions?: {
+    sentiment: string;
+    abuse: string;
+  };
+  error?: string;
+}
+
 // Interface for Tweet document
 export interface ITweet extends Document {
   tweetId: string;
@@ -22,20 +42,8 @@ export interface ITweet extends Document {
   lang: string;
   hashtags: string[];
   query: string;
-  analysis: {
-    sentiment: {
-      label: string;
-      score: number;
-    }[];
-    abuse: {
-      label: string;
-      score: number;
-    }[];
-    riskLevel: 'low' | 'medium' | 'high' | 'unknown';
-    confidence: number;
-    analyzedAt: Date;
-    error?: string;
-  };
+  analysis: IAnalysisResult;
+  analysisHistory: IAnalysisResult[];
   isProcessed: boolean;
   metadata: {
     source: string;
@@ -125,6 +133,37 @@ const TweetSchema = new Schema<ITweet>({
     },
     error: String
   },
+  analysisHistory: [{
+    sentiment: [{
+      label: { type: String, required: true },
+      score: { type: Number, required: true, min: 0, max: 1 }
+    }],
+    abuse: [{
+      label: { type: String, required: true },
+      score: { type: Number, required: true, min: 0, max: 1 }
+    }],
+    riskLevel: {
+      type: String,
+      enum: ['low', 'medium', 'high', 'unknown'],
+      required: true
+    },
+    confidence: {
+      type: Number,
+      min: 0,
+      max: 1,
+      required: true
+    },
+    analyzedAt: {
+      type: Date,
+      default: Date.now,
+      required: true
+    },
+    modelVersions: {
+      sentiment: { type: String, required: true },
+      abuse: { type: String, required: true }
+    },
+    error: String
+  }],
   isProcessed: {
     type: Boolean,
     default: true,

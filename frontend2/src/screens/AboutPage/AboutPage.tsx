@@ -1,21 +1,11 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import Navbar from "../../components/layout/Navbar";
 
 export const AboutPage = (): React.JSX.Element => {
   return (
     <div className="flex flex-col min-h-screen bg-[#f4f2ee]">
-      {/* Navbar */}
-      <nav className="w-full bg-white border-b border-[#dfdeda] py-3 sm:py-4 px-4 sm:px-8 flex items-center justify-between">
-        <div className="text-xl sm:text-2xl font-bold [font-family:'Lexend_Deca',Helvetica] text-[#3b3a39]">
-          TweetWatch
-        </div>
-        <div className="flex gap-3 sm:gap-6 text-sm sm:text-base">
-          <Link to="/" className="text-[#6e6d6b] font-medium hover:text-[#3b3a39] hover:underline">Home</Link>
-          <Link to="/detection" className="text-[#6e6d6b] font-medium hover:text-[#3b3a39] hover:underline">Monitor</Link>
-          <Link to="/analysis" className="text-[#6e6d6b] font-medium hover:text-[#3b3a39] hover:underline">Analysis</Link>
-          <Link to="/about" className="text-[#3b3a39] font-medium underline">About</Link>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Main Content */}
       <main className="flex-1 px-4 sm:px-8 py-6 sm:py-8">

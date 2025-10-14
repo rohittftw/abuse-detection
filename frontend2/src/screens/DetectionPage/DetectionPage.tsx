@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { API_ENDPOINTS } from "../../config/api";
+import Navbar from "../../components/layout/Navbar";
 
 export const DetectionPage = (): React.JSX.Element => {
   type RiskLevel = 'low' | 'medium' | 'high';
@@ -65,6 +66,185 @@ export const DetectionPage = (): React.JSX.Element => {
   const [recentSessions, setRecentSessions] = useState<any[]>([]);
   const [selectedSession, setSelectedSession] = useState<any>(null);
   const [loadingSessions, setLoadingSessions] = useState(false);
+  const [reanalyzing, setReanalyzing] = useState<{ [key: string]: boolean }>({});
+  const [reanalyzingSession, setReanalyzingSession] = useState(false);
+
+  const handleBulkReanalysis = async () => {
+    if (!selectedSession || reanalyzingSession) return;
+
+    setReanalyzingSession(true);
+    setError(null);
+    console.log('Starting bulk reanalysis...');
+
+    try {
+      // First update any old tweets without analysis history
+      if (analysisResults?.tweets) {
+        setAnalysisResults(prev => {
+          if (!prev || !prev.tweets) return prev;
+          return {
+            ...prev,
+            tweets: prev.tweets.map(tweet => {
+              if (!tweet.analysisHistory) {
+                return {
+                  ...tweet,
+                  analysisHistory: tweet.analysis ? [{
+                    ...tweet.analysis,
+                    analyzedAt: new Date(tweet.created_at || Date.now()).toISOString()
+                  }] : []
+                };
+              }
+              return tweet;
+            })
+          };
+        });
+      }
+
+      console.log('Sending reanalysis request for session:', selectedSession.sessionName);
+      const response = await fetch(API_ENDPOINTS.REANALYZE_SESSION(selectedSession.sessionName), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to reanalyze session');
+      }
+
+      const data = await response.json();
+      console.log('Received reanalysis response:', data);
+      
+      if (!data || !data.data || !Array.isArray(data.data)) {
+        console.error('Invalid response format:', data);
+        throw new Error('Invalid response format: missing data array');
+      }
+      
+      if (!data.overall) {
+        console.error('Invalid response format:', data);
+        throw new Error('Invalid response format: missing overall analysis');
+      }
+
+      // Process and update tweets with new analysis data
+      const processedTweets = data.data.map((tweet: any) => {
+        // Ensure tweet has the required properties
+        if (!tweet || !tweet.analysis) {
+          console.error('Invalid tweet data:', tweet);
+          return tweet;
+        }
+
+        // Re-format the analysis to match the frontend structure
+        const formattedAnalysis = {
+          abuse: tweet.analysis.abuse || [],
+          risk_level: tweet.analysis.risk_level,
+          confidence: tweet.analysis.confidence,
+          sentiment: tweet.analysis.sentiment || []
+        };
+
+        return {
+          ...tweet,
+          analysis: formattedAnalysis,
+          analysisHistory: Array.isArray(tweet.analysisHistory) ? tweet.analysisHistory : []
+        };
+      });
+
+      // Update all tweets in the analysis results
+      setAnalysisResults(prev => {
+        if (!prev) return prev;
+        // Ensure we have a valid tweets array to work with
+        if (!Array.isArray(processedTweets)) {
+          console.error('Invalid processed tweets:', processedTweets);
+          return prev;
+        }
+        
+        // Update with new tweet data and overall analysis
+        return {
+          ...prev,
+          tweets: processedTweets,
+          abuseDetection: {
+            ...prev.abuseDetection,
+            totalAbusive: processedTweets.filter(t => t.analysis.abuse.some((a: { label: string }) => a.label === 'HATE')).length,
+            riskLevel: data.overall.risk_level,
+            confidence: data.overall.confidence,
+            isHateSpeech: data.overall.overall_abuse === 'HATE',
+            hateSpeech: processedTweets.filter(t => t.analysis.abuse.some((a: { label: string }) => a.label === 'HATE')).length,
+            // Keep previous values for these since they're estimates
+            harassment: prev.abuseDetection.harassment,
+            threats: prev.abuseDetection.threats
+          },
+          sentimentAnalysis: {
+            ...prev.sentimentAnalysis,
+            positive: processedTweets.reduce((sum, t) => sum + (t.analysis.sentiment.find((s: { label: string; score: number }) => s.label === 'POSITIVE')?.score || 0) * 100, 0) / processedTweets.length,
+            neutral: processedTweets.reduce((sum, t) => sum + (t.analysis.sentiment.find((s: { label: string; score: number }) => s.label === 'NEUTRAL')?.score || 0) * 100, 0) / processedTweets.length,
+            negative: processedTweets.reduce((sum, t) => sum + (t.analysis.sentiment.find((s: { label: string; score: number }) => s.label === 'NEGATIVE')?.score || 0) * 100, 0) / processedTweets.length,
+            dominantSentiment: data.overall.overall_sentiment.toLowerCase(),
+            confidence: data.overall.confidence,
+            // Keep the previous overall score since it's a derived value
+            overallScore: prev.sentimentAnalysis.overallScore
+          }
+        };
+      });
+
+    } catch (error) {
+      console.error('Bulk reanalysis failed:', error);
+      setError(error instanceof Error ? error.message : 'Failed to reanalyze tweets');
+    } finally {
+      setReanalyzingSession(false);
+    }
+  };
+
+    const handleReanalysis = async (tweetId: string) => {
+    if (reanalyzing[tweetId]) return;
+
+    setReanalyzing(prev => ({ ...prev, [tweetId]: true }));
+    try {
+      const response = await fetch(API_ENDPOINTS.REANALYZE_TWEET(tweetId), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to reanalyze tweet');
+      }
+
+      const updatedTweet = await response.json();
+      console.log('Received updated tweet:', updatedTweet);
+      
+      if (!updatedTweet || !updatedTweet.analysis) {
+        throw new Error('Invalid response format: missing tweet analysis data');
+      }
+
+      // Update the tweet in the analysis results with the new analysis and history
+      setAnalysisResults(prev => {
+        if (!prev || !prev.tweets || !Array.isArray(prev.tweets)) {
+          console.error('Invalid analysis results state:', prev);
+          return prev;
+        }
+        
+        return {
+          ...prev,
+          tweets: prev.tweets.map(tweet => {
+            if (tweet.id === tweetId) {
+              return {
+                ...tweet,
+                analysis: updatedTweet.analysis,
+                analysisHistory: updatedTweet.analysisHistory || []
+              };
+            }
+            return tweet;
+          })
+        };
+      });
+    } catch (error) {
+      console.error('Reanalysis failed:', error);
+      setError(error instanceof Error ? error.message : 'Failed to reanalyze tweet');
+    } finally {
+      setReanalyzing(prev => ({ ...prev, [tweetId]: false }));
+    }
+  };
 
   const stages: string[] = [
     "Fetching tweets from Twitter API...",
@@ -427,6 +607,76 @@ export const DetectionPage = (): React.JSX.Element => {
     setError(null);
   };
 
+  const downloadPdfReport = async () => {
+    if (!analysisResults) return;
+
+    // Dynamic import of html2pdf.js
+    const html2pdf = (await import('html2pdf.js')).default;
+
+    // Create a new div for the PDF content
+    const element = document.createElement('div');
+    element.innerHTML = `
+      <div style="padding: 20px; font-family: Arial, sans-serif;">
+        <h1 style="color: #3b3a39; margin-bottom: 20px;">Tweet Analysis Report</h1>
+        
+        <div style="margin-bottom: 30px;">
+          <h2 style="color: #3b3a39; margin-bottom: 10px;">Analysis Overview</h2>
+          <p><strong>Query:</strong> ${analysisResults.keyword}</p>
+          <p><strong>Tweets Analyzed:</strong> ${analysisResults.tweetsAnalyzed}</p>
+          <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+          <h2 style="color: #3b3a39; margin-bottom: 10px;">Key Findings</h2>
+          <p><strong>Risk Level:</strong> ${analysisResults.abuseDetection.riskLevel.toUpperCase()}</p>
+          <p><strong>Abusive Tweets:</strong> ${analysisResults.abuseDetection.totalAbusive}</p>
+          <p><strong>Hate Speech Detected:</strong> ${analysisResults.abuseDetection.hateSpeech} tweets</p>
+          <p><strong>Harassment Instances:</strong> ${analysisResults.abuseDetection.harassment} tweets</p>
+          <p><strong>Threats Detected:</strong> ${analysisResults.abuseDetection.threats} tweets</p>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+          <h2 style="color: #3b3a39; margin-bottom: 10px;">Sentiment Analysis</h2>
+          <p><strong>Overall Score:</strong> ${analysisResults.sentimentAnalysis.overallScore}%</p>
+          <p><strong>Positive:</strong> ${analysisResults.sentimentAnalysis.positive}%</p>
+          <p><strong>Neutral:</strong> ${analysisResults.sentimentAnalysis.neutral}%</p>
+          <p><strong>Negative:</strong> ${analysisResults.sentimentAnalysis.negative}%</p>
+        </div>
+
+        ${analysisResults.tweets ? `
+          <div>
+            <h2 style="color: #3b3a39; margin-bottom: 10px;">Individual Tweets</h2>
+            ${analysisResults.tweets.map((tweet: any) => `
+              <div style="border: 1px solid #dfdeda; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
+                <p style="margin-bottom: 10px;"><strong>${tweet.author.name}</strong> @${tweet.author.username}</p>
+                <p style="margin-bottom: 10px;">${tweet.text}</p>
+                <p style="color: #6e6d6b; font-size: 14px;">
+                  Risk Level: ${tweet.analysis.risk_level.toUpperCase()} | 
+                  Confidence: ${(tweet.analysis.confidence * 100).toFixed(1)}%
+                </p>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `;
+
+    const opt = {
+      margin: 1,
+      filename: `tweet-analysis-${analysisResults.keyword}-${new Date().toISOString().split('T')[0]}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' as const }
+    };
+
+    try {
+      await html2pdf().set(opt).from(element).save();
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      setError('Failed to generate PDF report');
+    }
+  };
+
   const getRiskColor = (level: string) => {
     switch (level) {
       case 'high': return 'text-red-600 bg-red-50 border-red-200';
@@ -439,18 +689,7 @@ export const DetectionPage = (): React.JSX.Element => {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#f4f2ee]">
-      {/* Navbar */}
-      <nav className="w-full bg-white border-b border-[#dfdeda] py-3 sm:py-4 px-4 sm:px-8 flex items-center justify-between">
-        <div className="text-xl sm:text-2xl font-bold [font-family:'Lexend_Deca',Helvetica] text-[#3b3a39]">
-          TweetWatch
-        </div>
-        <div className="flex gap-3 sm:gap-6 text-sm sm:text-base">
-          <Link to="/" className="text-[#6e6d6b] font-medium hover:text-[#3b3a39] hover:underline">Home</Link>
-          <Link to="/detection" className="text-[#3b3a39] font-medium underline">Analysis</Link>
-          <Link to="/reports" className="text-[#6e6d6b] font-medium hover:text-[#3b3a39] hover:underline">Reports</Link>
-          <Link to="/about" className="text-[#6e6d6b] font-medium hover:text-[#3b3a39] hover:underline">About</Link>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Main Content */}
       <main className="flex-1 px-4 sm:px-8 py-6 sm:py-8">
@@ -626,18 +865,37 @@ export const DetectionPage = (): React.JSX.Element => {
                 </div>
               </div>
 
-              {/* Individual Tweets Toggle */}
+              {/* Individual Tweets Toggle and Bulk Reanalysis */}
               {analysisResults.tweets && analysisResults.tweets.length > 0 && (
-                <div className="text-center mb-6">
-                  <button
-                    onClick={() => setShowIndividualTweets(!showIndividualTweets)}
-                    className="px-8 py-4 bg-[#3b3a39] text-white rounded-lg hover:bg-[#2a2928] font-medium text-lg shadow-lg"
-                  >
-                    {showIndividualTweets ? 'Hide Individual Tweets' : 'View Individual Tweets'}
-                  </button>
-                  <p className="text-sm text-[#6e6d6b] mt-2">
+                <div className="text-center mb-6 space-y-4">
+                  <div className="flex justify-center gap-4">
+                    <button
+                      onClick={() => setShowIndividualTweets(!showIndividualTweets)}
+                      className="px-8 py-4 bg-[#3b3a39] text-white rounded-lg hover:bg-[#2a2928] font-medium text-lg shadow-lg"
+                    >
+                      {showIndividualTweets ? 'Hide Individual Tweets' : 'View Individual Tweets'}
+                    </button>
+                    {selectedSession && (
+                      <button
+                        onClick={handleBulkReanalysis}
+                        disabled={reanalyzingSession}
+                        className="px-8 py-4 bg-white text-[#3b3a39] border border-[#dfdeda] rounded-lg hover:bg-[#f4f2ee] font-medium text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        <svg className={`w-6 h-6 ${reanalyzingSession ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        {reanalyzingSession ? 'Reanalyzing All Tweets...' : 'Reanalyze All Tweets'}
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-sm text-[#6e6d6b]">
                     {analysisResults.tweets.length} tweets available for individual analysis
                   </p>
+                  {reanalyzingSession && (
+                    <p className="text-sm text-[#6e6d6b] animate-pulse">
+                      Reanalyzing all tweets, this may take a few moments...
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -666,7 +924,13 @@ export const DetectionPage = (): React.JSX.Element => {
                                 )}
                               </div>
                               <div className="text-sm text-[#6e6d6b]">
-                                {new Date(tweet.created_at).toLocaleString()}
+                                {new Date(tweet.created_at).toLocaleString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
                               </div>
                             </div>
                           </div>
@@ -677,10 +941,10 @@ export const DetectionPage = (): React.JSX.Element => {
                           
                           {/* Engagement Metrics */}
                           <div className="flex gap-4 text-sm text-[#6e6d6b]">
-                            <span>❤️ {tweet.public_metrics?.like_count || 0}</span>
-                            <span>🔄 {tweet.public_metrics?.retweet_count || 0}</span>
-                            <span>💬 {tweet.public_metrics?.reply_count || 0}</span>
-                            <span>🔗 {tweet.public_metrics?.quote_count || 0}</span>
+                            <span>❤️ {tweet.public_metrics?.likeCount || tweet.public_metrics?.like_count || tweet.publicMetrics?.likeCount || 0}</span>
+                            <span>🔄 {tweet.public_metrics?.retweetCount || tweet.public_metrics?.retweet_count || tweet.publicMetrics?.retweetCount || 0}</span>
+                            <span>💬 {tweet.public_metrics?.replyCount || tweet.public_metrics?.reply_count || tweet.publicMetrics?.replyCount || 0}</span>
+                            <span>🔗 {tweet.public_metrics?.quoteCount || tweet.public_metrics?.quote_count || tweet.publicMetrics?.quoteCount || 0}</span>
                           </div>
                         </div>
                         
@@ -742,6 +1006,47 @@ export const DetectionPage = (): React.JSX.Element => {
                               Confidence: {((tweet.analysis?.confidence || 0) * 100).toFixed(1)}%
                             </div>
                           </div>
+
+                          {/* Reanalysis Button */}
+                          <button
+                            onClick={() => handleReanalysis(tweet.id)}
+                            disabled={reanalyzing[tweet.id]}
+                            className="w-full bg-white text-[#3b3a39] border border-[#dfdeda] px-4 py-2 rounded-lg font-medium text-sm shadow hover:bg-[#f4f2ee] transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <svg className={`w-4 h-4 ${reanalyzing[tweet.id] ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            {reanalyzing[tweet.id] ? 'Reanalyzing...' : 'Reanalyze Tweet'}
+                          </button>
+
+                          {/* Analysis History */}
+                          {tweet.analysisHistory && tweet.analysisHistory.length > 0 && (
+                            <div className="bg-gray-50 rounded-lg p-4">
+                              <h4 className="font-medium text-[#3b3a39] mb-2">Analysis History</h4>
+                              <div className="space-y-3">
+                                {tweet.analysisHistory.map((history: any, idx: number) => (
+                                  <div key={idx} className="border-t border-[#dfdeda] pt-2">
+                                    <div className="text-xs text-[#6e6d6b] mb-1">
+                                      {new Date(history.analyzedAt).toLocaleString()}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                      <div>
+                                        <span className="font-medium">Sentiment: </span>
+                                        {history.sentiment[0]?.label}
+                                      </div>
+                                      <div>
+                                        <span className="font-medium">Risk: </span>
+                                        {history.risk_level || history.riskLevel || 'unknown'}
+                                      </div>
+                                    </div>
+                                    <div className="text-xs text-[#6e6d6b] mt-1">
+                                      Confidence: {(history.confidence * 100).toFixed(1)}%
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -759,11 +1064,11 @@ export const DetectionPage = (): React.JSX.Element => {
                     Your comprehensive analysis has been completed using real AI models for abuse detection and sentiment analysis.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                    <button className="bg-[#3b3a39] text-white px-6 py-3 rounded-lg font-medium text-sm shadow hover:bg-[#232221] transition-colors duration-200">
+                    <button 
+                      onClick={() => downloadPdfReport()} 
+                      className="bg-[#3b3a39] text-white px-6 py-3 rounded-lg font-medium text-sm shadow hover:bg-[#232221] transition-colors duration-200"
+                    >
                       Download PDF Report
-                    </button>
-                    <button className="bg-white text-[#3b3a39] border border-[#dfdeda] px-6 py-3 rounded-lg font-medium text-sm shadow hover:bg-[#f4f2ee] transition-colors duration-200">
-                      Export to CSV
                     </button>
                     <Link 
                       to="/reports" 

@@ -1,11 +1,14 @@
-import  { useState } from 'react';
+import React, { useState } from 'react';
+import Navbar from "../../components/layout/Navbar";
 
 export default function DebugButtons() {
   const [dataSource, setDataSource] = useState('twitter');
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen">
-      <h1 className="text-2xl font-bold mb-8">Button Debug Test</h1>
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <Navbar />
+      <main className="flex-1 p-8">
+        <h1 className="text-2xl font-bold mb-8">Button Debug Test</h1>
       
       {/* Test 1: Simple buttons with basic styling */}
       <div className="mb-8">
@@ -146,6 +149,7 @@ Button classes for Database: ${
           </button>
         </div>
       </div>
+      </main>
     </div>
   );
 }

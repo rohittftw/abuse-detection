@@ -9,8 +9,10 @@ import {
   getTweetsBySessionName,
   getTweetsBySessionId,
   getAllSessionNames,
-  reanalyzeSessionTweets
+  reanalyzeSessionTweets,
+  reanalyzeTweet
 } from '../Controller/modelController';
+import { Tweet } from '../models/tweet';
 
 const router = express.Router();
 
@@ -185,6 +187,24 @@ router.get('/sessions/id/:sessionId/tweets', async (req: express.Request, res: e
     res.json(result);
   } catch (error: any) {
     console.error('Get tweets by session ID error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Reanalyze a single tweet
+router.post('/tweets/:tweetId/reanalyze', async (req: express.Request, res: express.Response) => {
+  try {
+    const { tweetId } = req.params;
+    const tweet = await Tweet.findOne({ tweetId });
+    
+    if (!tweet) {
+      return res.status(404).json({ error: 'Tweet not found' });
+    }
+
+    const result = await reanalyzeTweet(tweet);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Reanalyze tweet error:', error);
     res.status(500).json({ error: error.message });
   }
 });
