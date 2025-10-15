@@ -116,11 +116,23 @@ export const fetchTweetsByHashtag = async (
   saveToDb: boolean = true,
   sessionName?: string
 ) => {
-  const BEARER_TOKEN = process.env.TWITTER_BEARER_TOKEN;
+  // Get multiple bearer tokens from environment variables
+  const BEARER_TOKEN_1 = process.env.TWITTER_BEARER_TOKEN_1;
+  const BEARER_TOKEN_2 = process.env.TWITTER_BEARER_TOKEN_2;
 
-  if (!BEARER_TOKEN) {
-    throw new Error("Twitter Bearer Token not set in environment variables");
+  // Store tokens in an array
+  const bearerTokens = [BEARER_TOKEN_1, BEARER_TOKEN_2].filter(token => token);
+
+  if (bearerTokens.length === 0) {
+    throw new Error("No Twitter Bearer Tokens set in environment variables");
   }
+
+  // Get the next token using a simple round-robin approach
+  const currentTokenIndex = global.currentTokenIndex || 0;
+  const currentToken = bearerTokens[currentTokenIndex];
+  
+  // Update the index for next request
+  global.currentTokenIndex = (currentTokenIndex + 1) % bearerTokens.length;
 
   // Clean hashtag - remove # if present
   const cleanHashtag = hashtag.startsWith("#") ? hashtag.slice(1) : hashtag;
@@ -147,7 +159,7 @@ export const fetchTweetsByHashtag = async (
 
     const response = await axios.get(url, {
       headers: {
-        Authorization: `Bearer ${BEARER_TOKEN}`,
+        Authorization: `Bearer ${currentToken}`,
         "Content-Type": "application/json",
       },
       params: params,
