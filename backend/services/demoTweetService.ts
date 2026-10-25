@@ -41,8 +41,6 @@ export class DemoTweetService {
             $match: {
               $or: [
                 { hashtags: { $in: tokens } },
-                { topic: { $in: tokens } },
-                { region: { $in: tokens } },
                 {
                   text: {
                     $in: tokens.map(
@@ -64,8 +62,8 @@ export class DemoTweetService {
     const usersById = new Map<string, any>();
 
     const tweets = docs.map((doc: any) => {
-      usersById.set(doc.author.id, {
-        id: doc.author.id,
+      usersById.set(doc.authorId, {
+        id: doc.authorId,
         name: doc.author.name,
         username: doc.author.username,
         verified: doc.author.verified,
@@ -75,7 +73,7 @@ export class DemoTweetService {
         id: doc.tweetId,
         text: doc.text,
         created_at: doc.createdAt.toISOString(),
-        author_id: doc.author.id,
+        author_id: doc.authorId,
         public_metrics: {
           retweet_count: doc.publicMetrics.retweetCount || 0,
           like_count: doc.publicMetrics.likeCount || 0,

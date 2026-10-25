@@ -1,9 +1,23 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+/**
+ * A raw, unanalysed tweet that stands in for a live Twitter/X API result.
+ *
+ * This collection is a fetch source, not a result store:
+ *   - documents are shared and owned by nobody (`userId`/`sessionId` are absent)
+ *   - they contain exactly the fields the Twitter API returns for a tweet plus
+ *     its expanded author
+ *   - there is no analysis here. When a user fetches tweets, the normal
+ *     fetch-and-analyse pipeline scores them and writes the results to that
+ *     user's own `tweets` collection.
+ */
 export interface IDemoTweet extends Document {
+  /** Same as the Twitter tweet id. */
   tweetId: string;
   text: string;
   createdAt: Date;
+  /** Same as `author_id` in the Twitter API payload. */
+  authorId: string;
   author: {
     id: string;
     name: string;
@@ -18,20 +32,8 @@ export interface IDemoTweet extends Document {
   };
   lang: string;
   hashtags: string[];
-  topic: string;
-  region: string;
-  /**
-   * Intended label for QA. The app does not read this field; it is only here
-   * so the seed data can be checked against the model's output.
-   */
-  expectedRisk: 'low' | 'medium' | 'high' | 'unknown';
 }
 
-/**
- * Raw, shared demo tweets used when the Twitter API is unavailable.
- * These documents are intentionally not owned by a user and have no session.
- * The normal fetch-and-analyze flow copies them into the caller's session.
- */
 const DemoTweetSchema = new Schema<IDemoTweet>(
   {
     tweetId: {
@@ -45,6 +47,10 @@ const DemoTweetSchema = new Schema<IDemoTweet>(
     },
     createdAt: {
       type: Date,
+      required: true,
+    },
+    authorId: {
+      type: String,
       required: true,
     },
     author: {
@@ -64,19 +70,6 @@ const DemoTweetSchema = new Schema<IDemoTweet>(
       default: 'en',
     },
     hashtags: [{ type: String }],
-    topic: {
-      type: String,
-      required: true,
-    },
-    region: {
-      type: String,
-      required: true,
-    },
-    expectedRisk: {
-      type: String,
-      enum: ['low', 'medium', 'high', 'unknown'],
-      default: 'low',
-    },
   },
   {
     collection: 'demo_tweets',
