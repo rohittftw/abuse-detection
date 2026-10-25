@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { BadgeCheck, BarChart3, Heart, Link2, MessageCircle, Repeat2 } from "lucide-react";
 import { API_ENDPOINTS } from "../../config/api";
-import Navbar from "../../components/layout/Navbar";
+import AppLayout from "../../components/layout/AppLayout";
+import PageHeader from "../../components/home/PageHeader";
 
 export const DetectionPage = (): React.JSX.Element => {
   type RiskLevel = 'low' | 'medium' | 'high';
@@ -617,17 +619,17 @@ export const DetectionPage = (): React.JSX.Element => {
     const element = document.createElement('div');
     element.innerHTML = `
       <div style="padding: 20px; font-family: Arial, sans-serif;">
-        <h1 style="color: #3b3a39; margin-bottom: 20px;">Tweet Analysis Report</h1>
+        <h1 style="color: var(--color-text-primary); margin-bottom: 20px;">Tweet Analysis Report</h1>
         
         <div style="margin-bottom: 30px;">
-          <h2 style="color: #3b3a39; margin-bottom: 10px;">Analysis Overview</h2>
+          <h2 style="color: var(--color-text-primary); margin-bottom: 10px;">Analysis Overview</h2>
           <p><strong>Query:</strong> ${analysisResults.keyword}</p>
           <p><strong>Tweets Analyzed:</strong> ${analysisResults.tweetsAnalyzed}</p>
           <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
         </div>
 
         <div style="margin-bottom: 30px;">
-          <h2 style="color: #3b3a39; margin-bottom: 10px;">Key Findings</h2>
+          <h2 style="color: var(--color-text-primary); margin-bottom: 10px;">Key Findings</h2>
           <p><strong>Risk Level:</strong> ${analysisResults.abuseDetection.riskLevel.toUpperCase()}</p>
           <p><strong>Abusive Tweets:</strong> ${analysisResults.abuseDetection.totalAbusive}</p>
           <p><strong>Hate Speech Detected:</strong> ${analysisResults.abuseDetection.hateSpeech} tweets</p>
@@ -636,7 +638,7 @@ export const DetectionPage = (): React.JSX.Element => {
         </div>
 
         <div style="margin-bottom: 30px;">
-          <h2 style="color: #3b3a39; margin-bottom: 10px;">Sentiment Analysis</h2>
+          <h2 style="color: var(--color-text-primary); margin-bottom: 10px;">Sentiment Analysis</h2>
           <p><strong>Overall Score:</strong> ${analysisResults.sentimentAnalysis.overallScore}%</p>
           <p><strong>Positive:</strong> ${analysisResults.sentimentAnalysis.positive}%</p>
           <p><strong>Neutral:</strong> ${analysisResults.sentimentAnalysis.neutral}%</p>
@@ -645,12 +647,12 @@ export const DetectionPage = (): React.JSX.Element => {
 
         ${analysisResults.tweets ? `
           <div>
-            <h2 style="color: #3b3a39; margin-bottom: 10px;">Individual Tweets</h2>
+            <h2 style="color: var(--color-text-primary); margin-bottom: 10px;">Individual Tweets</h2>
             ${analysisResults.tweets.map((tweet: any) => `
-              <div style="border: 1px solid #dfdeda; padding: 15px; margin-bottom: 15px; border-radius: 8px;">
+              <div style="border: 1px solid var(--color-border); padding: 15px; margin-bottom: 15px; border-radius: 8px;">
                 <p style="margin-bottom: 10px;"><strong>${tweet.author.name}</strong> @${tweet.author.username}</p>
                 <p style="margin-bottom: 10px;">${tweet.text}</p>
-                <p style="color: #6e6d6b; font-size: 14px;">
+                <p style="color: var(--color-text-secondary); font-size: 14px;">
                   Risk Level: ${tweet.analysis.risk_level.toUpperCase()} | 
                   Confidence: ${(tweet.analysis.confidence * 100).toFixed(1)}%
                 </p>
@@ -682,32 +684,23 @@ export const DetectionPage = (): React.JSX.Element => {
       case 'high': return 'text-red-600 bg-red-50 border-red-200';
       case 'medium': return 'text-orange-600 bg-orange-50 border-orange-200';
       case 'low': return 'text-green-600 bg-green-50 border-green-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+      default: return 'text-gray-600 bg-home-surface-elevated border-gray-200';
     }
   };
 
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#f4f2ee]">
-      <Navbar />
-
-      {/* Main Content */}
-      <main className="flex-1 px-4 sm:px-8 py-6 sm:py-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Page Header */}
-          <div className="text-center mb-8 sm:mb-10">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold [font-family:'Lexend_Deca',Helvetica] text-[#3b3a39] mb-3 sm:mb-4">
-              AI-Powered Social Media Analysis
-            </h1>
-            <p className="text-sm sm:text-base md:text-lg font-light [font-family:'Lexend_Deca',Helvetica] text-[#6e6d6b] max-w-3xl mx-auto">
-              Enter a keyword or hashtag to fetch tweets and generate comprehensive analysis reports including abuse detection, sentiment analysis, bias detection, and tone analysis.
-            </p>
-          </div>
+    <AppLayout>
+          <PageHeader
+            label="Dashboard"
+            title="AI-Powered Social Media Analysis"
+            description="Enter a keyword or hashtag to fetch tweets and generate comprehensive analysis reports including abuse detection, sentiment analysis, bias detection, and tone analysis."
+          />
 
           {/* Input Section */}
-          <div className="bg-white rounded-lg border border-[#dfdeda] shadow mb-6 sm:mb-8">
+          <div className="tw-card mb-6 sm:mb-8">
             <div className="p-4 sm:p-6">
-              <label htmlFor="keyword-input" className="block text-sm font-medium text-[#3b3a39] mb-3">
+              <label htmlFor="keyword-input" className="block text-sm font-medium text-home-heading mb-3">
                 Enter keyword or hashtag for analysis
               </label>
               
@@ -721,19 +714,19 @@ export const DetectionPage = (): React.JSX.Element => {
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
                   placeholder="e.g., #India lang:en, climate change..."
-                  className="flex-1 px-4 py-3 border border-[#dfdeda] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3b3a39] focus:border-transparent text-sm sm:text-base"
+                  className="tw-input flex-1"
                   disabled={isProcessing}
                 />
                 <button
                   onClick={processAnalysis}
                   disabled={!keyword.trim() || isProcessing}
-                  className="bg-[#3b3a39] text-white px-6 py-3 rounded-lg font-medium text-sm sm:text-base shadow hover:bg-[#232221] disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200 min-h-[48px] flex items-center justify-center sm:w-auto"
+                  className="tw-btn-primary min-h-[48px] sm:w-auto text-sm sm:text-base"
                 >
                   {isProcessing ? 'Processing...' : `Analyze from Twitter`}
                 </button>
                 <button
                   onClick={clearResults}
-                  className="bg-white text-[#3b3a39] border border-[#dfdeda] px-6 py-3 rounded-lg font-medium text-sm sm:text-base shadow hover:bg-[#f4f2ee] transition-colors duration-200 min-h-[48px] flex items-center justify-center sm:w-auto"
+                  className="tw-btn-secondary min-h-[48px] sm:w-auto"
                 >
                   Clear
                 </button>
@@ -743,28 +736,26 @@ export const DetectionPage = (): React.JSX.Element => {
 
           {/* Error Display */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <div className="flex items-center">
-                <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                <p className="text-red-800 font-medium">{error}</p>
-              </div>
+            <div className="tw-alert-error mb-6 flex items-center gap-2">
+              <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <p className="font-medium">{error}</p>
             </div>
           )}
 
           {/* Processing Status */}
           {isProcessing && (
-            <div className="bg-white rounded-lg border border-[#dfdeda] shadow mb-6 sm:mb-8">
+            <div className="tw-card mb-6 sm:mb-8">
               <div className="p-4 sm:p-6">
                 <div className="flex items-center justify-center mb-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-[#3b3a39] border-t-transparent mr-3"></div>
-                  <h3 className="text-lg font-bold text-[#3b3a39]">Processing Analysis</h3>
+                  <div className="animate-spin rounded-full h-8 w-8 border-4 border-home-accent border-t-transparent mr-3"></div>
+                  <h3 className="text-lg font-bold text-home-heading">Processing Analysis</h3>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-[#6e6d6b] mb-4">{processingStage}</p>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-[#3b3a39] h-2 rounded-full transition-all duration-1000" style={{width: `${((stages.indexOf(processingStage) + 1) / stages.length) * 100}%`}}></div>
+                  <p className="text-sm text-home-muted mb-4">{processingStage}</p>
+                  <div className="tw-progress-track">
+                    <div className="tw-progress-bar" style={{width: `${((stages.indexOf(processingStage) + 1) / stages.length) * 100}%`}}></div>
                   </div>
                 </div>
               </div>
@@ -775,23 +766,23 @@ export const DetectionPage = (): React.JSX.Element => {
           {analysisResults && (
             <div className="space-y-6">
               {/* Overview Stats */}
-              <div className="bg-white rounded-lg border border-[#dfdeda] shadow">
+              <div className="tw-card">
                 <div className="p-4 sm:p-6">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg sm:text-xl font-bold [font-family:'Lexend_Deca',Helvetica] text-[#3b3a39]">
+                    <h3 className="text-lg sm:text-xl font-bold text-home-heading">
                     Analysis Overview - "{analysisResults.keyword}"
                   </h3>
-                    <div className="text-sm text-[#6e6d6b]">
+                    <div className="text-sm text-home-muted">
                       Source: {analysisResults.source}
                     </div>
                   </div>
                   
                   {analysisResults.sessionInfo && (
-                    <div className="mb-4 p-3 bg-[#f4f2ee] rounded-lg border border-[#dfdeda]">
-                      <div className="text-sm font-medium text-[#3b3a39] mb-1">
+                    <div className="mb-4 p-3 bg-home-bg rounded-lg border border-home-border">
+                      <div className="text-sm font-medium text-home-heading mb-1">
                         Session Information
                       </div>
-                      <div className="text-xs text-[#6e6d6b] space-y-1">
+                      <div className="text-xs text-home-muted space-y-1">
                         <div>Session: {analysisResults.sessionInfo.sessionName}</div>
                         <div>Query: "{analysisResults.sessionInfo.query}"</div>
                         <div>Session ID: {analysisResults.sessionInfo.sessionId}</div>
@@ -799,24 +790,24 @@ export const DetectionPage = (): React.JSX.Element => {
                     </div>
                   )}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div className="text-center p-3 border border-[#dfdeda] rounded-lg">
-                      <div className="text-xl sm:text-2xl font-bold text-[#3b3a39]">{analysisResults.tweetsAnalyzed}</div>
-                      <div className="text-xs sm:text-sm text-[#6e6d6b]">Tweets Analyzed</div>
+                    <div className="text-center p-3 border border-home-border rounded-lg">
+                      <div className="text-xl sm:text-2xl font-bold text-home-heading">{analysisResults.tweetsAnalyzed}</div>
+                      <div className="text-xs sm:text-sm text-home-muted">Tweets Analyzed</div>
                     </div>
                     <div className={`text-center p-3 border rounded-lg ${getRiskColor(analysisResults.abuseDetection.riskLevel)}`}>
                       <div className="text-xl sm:text-2xl font-bold">{analysisResults.abuseDetection.riskLevel.toUpperCase()}</div>
                       <div className="text-xs sm:text-sm">Risk Level</div>
                       <div className="text-xs">({(analysisResults.abuseDetection.confidence * 100).toFixed(1)}% confidence)</div>
                     </div>
-                    <div className="text-center p-3 border border-[#dfdeda] rounded-lg">
-                      <div className="text-xl sm:text-2xl font-bold text-[#3b3a39]">{analysisResults.sentimentAnalysis.overallScore}%</div>
-                      <div className="text-xs sm:text-sm text-[#6e6d6b]">Sentiment Score</div>
-                      <div className="text-xs text-[#6e6d6b]">({analysisResults.sentimentAnalysis.dominantSentiment})</div>
+                    <div className="text-center p-3 border border-home-border rounded-lg">
+                      <div className="text-xl sm:text-2xl font-bold text-home-heading">{analysisResults.sentimentAnalysis.overallScore}%</div>
+                      <div className="text-xs sm:text-sm text-home-muted">Sentiment Score</div>
+                      <div className="text-xs text-home-muted">({analysisResults.sentimentAnalysis.dominantSentiment})</div>
                     </div>
-                    <div className="text-center p-3 border border-[#dfdeda] rounded-lg">
-                      <div className="text-xl sm:text-2xl font-bold text-[#3b3a39]">{analysisResults.abuseDetection.totalAbusive}</div>
-                      <div className="text-xs sm:text-sm text-[#6e6d6b]">Abusive Tweets</div>
-                      <div className="text-xs text-[#6e6d6b]">
+                    <div className="text-center p-3 border border-home-border rounded-lg">
+                      <div className="text-xl sm:text-2xl font-bold text-home-heading">{analysisResults.abuseDetection.totalAbusive}</div>
+                      <div className="text-xs sm:text-sm text-home-muted">Abusive Tweets</div>
+                      <div className="text-xs text-home-muted">
                         {analysisResults.abuseDetection.isHateSpeech ? 'Contains Hate Speech' : 'No Hate Speech Detected'}
                       </div>
                     </div>
@@ -828,9 +819,9 @@ export const DetectionPage = (): React.JSX.Element => {
               {/* Detailed Analysis Grid */}
               <div className="grid lg:grid-cols-2 gap-6">
                 {/* Abuse Detection - Updated with real data */}
-                <div className="bg-white rounded-lg border border-[#dfdeda] shadow">
+                <div className="tw-card">
                   <div className="p-4 sm:p-6">
-                    <h3 className="text-lg font-bold [font-family:'Lexend_Deca',Helvetica] text-[#3b3a39] mb-4 flex items-center">
+                    <h3 className="text-lg font-bold text-home-heading mb-4 flex items-center">
                       <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                       </svg>
@@ -852,7 +843,7 @@ export const DetectionPage = (): React.JSX.Element => {
                         <span className="text-sm font-medium">Threats</span>
                         <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-sm">{analysisResults.abuseDetection.threats}</span>
                       </div>
-                      <div className="pt-3 border-t border-[#dfdeda]">
+                      <div className="pt-3 border-t border-home-border">
                         <div className="flex justify-between items-center font-bold">
                           <span>Overall Bias Level</span>
                           <span className={`px-2 py-1 rounded text-sm ${getRiskColor(analysisResults.biasDetection.biasLevel)}`}>
@@ -871,7 +862,7 @@ export const DetectionPage = (): React.JSX.Element => {
                   <div className="flex justify-center gap-4">
                     <button
                       onClick={() => setShowIndividualTweets(!showIndividualTweets)}
-                      className="px-8 py-4 bg-[#3b3a39] text-white rounded-lg hover:bg-[#2a2928] font-medium text-lg shadow-lg"
+                      className="tw-btn-primary text-lg px-8 py-4"
                     >
                       {showIndividualTweets ? 'Hide Individual Tweets' : 'View Individual Tweets'}
                     </button>
@@ -879,7 +870,7 @@ export const DetectionPage = (): React.JSX.Element => {
                       <button
                         onClick={handleBulkReanalysis}
                         disabled={reanalyzingSession}
-                        className="px-8 py-4 bg-white text-[#3b3a39] border border-[#dfdeda] rounded-lg hover:bg-[#f4f2ee] font-medium text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        className="tw-btn-secondary text-lg px-8 py-4 disabled:opacity-50 disabled:cursor-not-allowed gap-2"
                       >
                         <svg className={`w-6 h-6 ${reanalyzingSession ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -888,11 +879,11 @@ export const DetectionPage = (): React.JSX.Element => {
                       </button>
                     )}
                   </div>
-                  <p className="text-sm text-[#6e6d6b]">
+                  <p className="text-sm text-home-muted">
                     {analysisResults.tweets.length} tweets available for individual analysis
                   </p>
                   {reanalyzingSession && (
-                    <p className="text-sm text-[#6e6d6b] animate-pulse">
+                    <p className="text-sm text-home-muted animate-pulse">
                       Reanalyzing all tweets, this may take a few moments...
                     </p>
                   )}
@@ -902,28 +893,28 @@ export const DetectionPage = (): React.JSX.Element => {
               {/* Individual Tweets Display */}
               {showIndividualTweets && analysisResults.tweets && (
                 <div className="space-y-6">
-                  <h2 className="text-xl font-bold [font-family:'Lexend_Deca',Helvetica] text-[#3b3a39]">
+                  <h2 className="text-xl font-bold text-home-heading">
                     Individual Tweet Analysis
                   </h2>
                   
                   {analysisResults.tweets.map((tweet: any) => (
-                    <div key={tweet.id} className="bg-white rounded-lg border border-[#dfdeda] shadow p-6">
+                    <div key={tweet.id} className="tw-card p-6">
                       <div className="flex flex-col lg:flex-row gap-4">
                         {/* Tweet Content */}
                         <div className="flex-1">
                           <div className="flex items-start gap-3 mb-3">
-                            <div className="w-10 h-10 bg-[#3b3a39] rounded-full flex items-center justify-center text-white font-bold text-sm">
+                            <div className="w-10 h-10 bg-home-accent rounded-full flex items-center justify-center text-white font-bold text-sm">
                               {tweet.author?.name?.charAt(0) || 'U'}
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-[#3b3a39]">{tweet.author?.name || 'Unknown'}</span>
-                                <span className="text-[#6e6d6b]">@{tweet.author?.username || 'unknown'}</span>
+                                <span className="font-medium text-home-heading">{tweet.author?.name || 'Unknown'}</span>
+                                <span className="text-home-muted">@{tweet.author?.username || 'unknown'}</span>
                                 {tweet.author?.verified && (
-                                  <span className="text-blue-500 text-sm">✓</span>
+                                  <BadgeCheck className="h-4 w-4 text-home-accent" aria-label="Verified" />
                                 )}
                               </div>
-                              <div className="text-sm text-[#6e6d6b]">
+                              <div className="text-sm text-home-muted">
                                 {new Date(tweet.created_at).toLocaleString('en-US', {
                                   year: 'numeric',
                                   month: 'short',
@@ -935,36 +926,48 @@ export const DetectionPage = (): React.JSX.Element => {
                             </div>
                           </div>
                           
-                          <div className="text-[#3b3a39] mb-4 leading-relaxed">
+                          <div className="text-home-heading mb-4 leading-relaxed">
                             {tweet.text}
                           </div>
                           
                           {/* Engagement Metrics */}
-                          <div className="flex gap-4 text-sm text-[#6e6d6b]">
-                            <span>❤️ {tweet.public_metrics?.likeCount || tweet.public_metrics?.like_count || tweet.publicMetrics?.likeCount || 0}</span>
-                            <span>🔄 {tweet.public_metrics?.retweetCount || tweet.public_metrics?.retweet_count || tweet.publicMetrics?.retweetCount || 0}</span>
-                            <span>💬 {tweet.public_metrics?.replyCount || tweet.public_metrics?.reply_count || tweet.publicMetrics?.replyCount || 0}</span>
-                            <span>🔗 {tweet.public_metrics?.quoteCount || tweet.public_metrics?.quote_count || tweet.publicMetrics?.quoteCount || 0}</span>
+                          <div className="flex flex-wrap gap-4 text-sm text-home-muted">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Heart className="h-4 w-4" strokeWidth={1.8} />
+                              {tweet.public_metrics?.likeCount || tweet.public_metrics?.like_count || tweet.publicMetrics?.likeCount || 0}
+                            </span>
+                            <span className="inline-flex items-center gap-1.5">
+                              <Repeat2 className="h-4 w-4" strokeWidth={1.8} />
+                              {tweet.public_metrics?.retweetCount || tweet.public_metrics?.retweet_count || tweet.publicMetrics?.retweetCount || 0}
+                            </span>
+                            <span className="inline-flex items-center gap-1.5">
+                              <MessageCircle className="h-4 w-4" strokeWidth={1.8} />
+                              {tweet.public_metrics?.replyCount || tweet.public_metrics?.reply_count || tweet.publicMetrics?.replyCount || 0}
+                            </span>
+                            <span className="inline-flex items-center gap-1.5">
+                              <Link2 className="h-4 w-4" strokeWidth={1.8} />
+                              {tweet.public_metrics?.quoteCount || tweet.public_metrics?.quote_count || tweet.publicMetrics?.quoteCount || 0}
+                            </span>
                           </div>
                         </div>
                         
                         {/* Analysis Results */}
                         <div className="lg:w-80 space-y-4">
                           {/* Sentiment Analysis */}
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <h4 className="font-medium text-[#3b3a39] mb-2">Sentiment Analysis</h4>
+                          <div className="bg-home-surface-elevated rounded-lg p-4">
+                            <h4 className="font-medium text-home-heading mb-2">Sentiment Analysis</h4>
                             <div className="space-y-2">
                               {tweet.analysis?.sentiment?.map((item: any, idx: number) => (
                                 <div key={idx} className="flex items-center justify-between">
                                   <span className="text-sm capitalize">{item.label}</span>
                                   <div className="flex items-center gap-2">
-                                    <div className="w-16 bg-gray-200 rounded-full h-2">
+                                    <div className="w-16 bg-home-border rounded-full h-2">
                                       <div 
-                                        className="bg-[#3b3a39] h-2 rounded-full" 
+                                        className="bg-home-accent h-2 rounded-full" 
                                         style={{width: `${item.score * 100}%`}}
                                       ></div>
                                     </div>
-                                    <span className="text-xs text-[#6e6d6b] w-8">
+                                    <span className="text-xs text-home-muted w-8">
                                       {(item.score * 100).toFixed(1)}%
                                     </span>
                                   </div>
@@ -974,20 +977,20 @@ export const DetectionPage = (): React.JSX.Element => {
                           </div>
                           
                           {/* Abuse Detection */}
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <h4 className="font-medium text-[#3b3a39] mb-2">Abuse Detection</h4>
+                          <div className="bg-home-surface-elevated rounded-lg p-4">
+                            <h4 className="font-medium text-home-heading mb-2">Abuse Detection</h4>
                             <div className="space-y-2">
                               {tweet.analysis?.abuse?.map((item: any, idx: number) => (
                                 <div key={idx} className="flex items-center justify-between">
                                   <span className="text-sm capitalize">{item.label.replace('_', ' ')}</span>
                                   <div className="flex items-center gap-2">
-                                    <div className="w-16 bg-gray-200 rounded-full h-2">
+                                    <div className="w-16 bg-home-border rounded-full h-2">
                                       <div 
-                                        className="bg-[#3b3a39] h-2 rounded-full" 
+                                        className="bg-home-accent h-2 rounded-full" 
                                         style={{width: `${item.score * 100}%`}}
                                       ></div>
                                     </div>
-                                    <span className="text-xs text-[#6e6d6b] w-8">
+                                    <span className="text-xs text-home-muted w-8">
                                       {(item.score * 100).toFixed(1)}%
                                     </span>
                                   </div>
@@ -1011,7 +1014,7 @@ export const DetectionPage = (): React.JSX.Element => {
                           <button
                             onClick={() => handleReanalysis(tweet.id)}
                             disabled={reanalyzing[tweet.id]}
-                            className="w-full bg-white text-[#3b3a39] border border-[#dfdeda] px-4 py-2 rounded-lg font-medium text-sm shadow hover:bg-[#f4f2ee] transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full bg-home-surface text-home-heading border border-home-border px-4 py-2 rounded-lg font-medium text-sm shadow hover:bg-home-surface-elevated transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <svg className={`w-4 h-4 ${reanalyzing[tweet.id] ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -1021,12 +1024,12 @@ export const DetectionPage = (): React.JSX.Element => {
 
                           {/* Analysis History */}
                           {tweet.analysisHistory && tweet.analysisHistory.length > 0 && (
-                            <div className="bg-gray-50 rounded-lg p-4">
-                              <h4 className="font-medium text-[#3b3a39] mb-2">Analysis History</h4>
+                            <div className="bg-home-surface-elevated rounded-lg p-4">
+                              <h4 className="font-medium text-home-heading mb-2">Analysis History</h4>
                               <div className="space-y-3">
                                 {tweet.analysisHistory.map((history: any, idx: number) => (
-                                  <div key={idx} className="border-t border-[#dfdeda] pt-2">
-                                    <div className="text-xs text-[#6e6d6b] mb-1">
+                                  <div key={idx} className="border-t border-home-border pt-2">
+                                    <div className="text-xs text-home-muted mb-1">
                                       {new Date(history.analyzedAt).toLocaleString()}
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 text-xs">
@@ -1039,7 +1042,7 @@ export const DetectionPage = (): React.JSX.Element => {
                                         {history.risk_level || history.riskLevel || 'unknown'}
                                       </div>
                                     </div>
-                                    <div className="text-xs text-[#6e6d6b] mt-1">
+                                    <div className="text-xs text-home-muted mt-1">
                                       Confidence: {(history.confidence * 100).toFixed(1)}%
                                     </div>
                                   </div>
@@ -1055,24 +1058,24 @@ export const DetectionPage = (): React.JSX.Element => {
               )}
 
               {/* Report Generation */}
-              <div className="bg-white rounded-lg border border-[#dfdeda] shadow">
+              <div className="tw-card">
                 <div className="p-4 sm:p-6 text-center">
-                  <h3 className="text-lg font-bold [font-family:'Lexend_Deca',Helvetica] text-[#3b3a39] mb-4">
+                  <h3 className="text-lg font-bold text-home-heading mb-4">
                     Complete Analysis Report
                   </h3>
-                  <p className="text-sm text-[#6e6d6b] mb-4">
+                  <p className="text-sm text-home-muted mb-4">
                     Your comprehensive analysis has been completed using real AI models for abuse detection and sentiment analysis.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <button 
                       onClick={() => downloadPdfReport()} 
-                      className="bg-[#3b3a39] text-white px-6 py-3 rounded-lg font-medium text-sm shadow hover:bg-[#232221] transition-colors duration-200"
+                      className="tw-btn-primary"
                     >
                       Download PDF Report
                     </button>
                     <Link 
                       to="/reports" 
-                      className="bg-white text-[#3b3a39] border border-[#dfdeda] px-6 py-3 rounded-lg font-medium text-sm shadow hover:bg-[#f4f2ee] transition-colors duration-200 inline-flex items-center justify-center"
+                      className="tw-btn-secondary inline-flex"
                     >
                       View All Reports
                     </Link>
@@ -1084,16 +1087,16 @@ export const DetectionPage = (): React.JSX.Element => {
 
           {/* Recent Sessions */}
           <div className="mt-8">
-            <div className="bg-white rounded-lg border border-[#dfdeda] shadow">
+            <div className="tw-card">
               <div className="p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold [font-family:'Lexend_Deca',Helvetica] text-[#3b3a39]">
+                  <h3 className="text-lg font-bold text-home-heading">
                     Recent Analysis Sessions
                   </h3>
                   <button
                     onClick={fetchRecentSessions}
                     disabled={loadingSessions}
-                    className="text-sm text-[#3b3a39] hover:text-[#232221] disabled:opacity-50"
+                    className="text-sm text-home-heading hover:text-[#232221] disabled:opacity-50"
                   >
                     {loadingSessions ? 'Refreshing...' : 'Refresh'}
                   </button>
@@ -1102,8 +1105,8 @@ export const DetectionPage = (): React.JSX.Element => {
                 
                 {loadingSessions ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-[#3b3a39] border-t-transparent"></div>
-                    <span className="ml-2 text-[#6e6d6b]">Loading sessions...</span>
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-home-accent border-t-transparent"></div>
+                    <span className="ml-2 text-home-muted">Loading sessions...</span>
                   </div>
                 ) : recentSessions.length > 0 ? (
                   <div className="space-y-3">
@@ -1112,41 +1115,43 @@ export const DetectionPage = (): React.JSX.Element => {
                         key={session.sessionId} 
                         className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
                           selectedSession?.sessionId === session.sessionId 
-                            ? 'border-[#3b3a39] bg-[#f4f2ee]' 
-                            : 'border-[#dfdeda] hover:border-[#3b3a39]'
+                            ? 'border-home-accent bg-home-bg' 
+                            : 'border-home-border hover:border-home-accent'
                         }`}
                         onClick={() => fetchTweetsFromSession(session.sessionName)}
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex-1">
-                            <div className="font-medium text-[#3b3a39] text-sm mb-1">
+                            <div className="font-medium text-home-heading text-sm mb-1">
                               {session.sessionName}
                             </div>
-                            <div className="text-xs text-[#6e6d6b] mb-1">
+                            <div className="text-xs text-home-muted mb-1">
                               Query: "{session.query}"
                             </div>
-                            <div className="text-xs text-[#6e6d6b]">
+                            <div className="text-xs text-home-muted">
                               Hashtag: #{session.hashtag}
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="text-xs text-[#6e6d6b] mb-1">
+                            <div className="text-xs text-home-muted mb-1">
                               {session.tweetCount} tweets
                             </div>
-                            <div className="text-xs text-[#6e6d6b]">
+                            <div className="text-xs text-home-muted">
                               {new Date(session.startedAt).toLocaleString()}
                             </div>
                           </div>
                         </div>
-                        <div className="text-xs text-[#3b3a39] font-medium">
+                        <div className="text-xs text-home-heading font-medium">
                           Click to load analysis →
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-[#6e6d6b]">
-                    <div className="text-4xl mb-2">📊</div>
+                  <div className="text-center py-8 text-home-muted">
+                    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-home-accent-soft text-home-accent">
+                      <BarChart3 className="h-7 w-7" strokeWidth={1.7} />
+                    </div>
                     <p>No analysis sessions found</p>
                     <p className="text-sm">Run an analysis to see your sessions here</p>
                   </div>
@@ -1158,20 +1163,20 @@ export const DetectionPage = (): React.JSX.Element => {
           {/* Search History */}
           {searchHistory.length > 0 && (
             <div className="mt-8">
-              <div className="bg-white rounded-lg border border-[#dfdeda] shadow">
+              <div className="tw-card">
                 <div className="p-4 sm:p-6">
-                  <h3 className="text-lg font-bold [font-family:'Lexend_Deca',Helvetica] text-[#3b3a39] mb-4">
+                  <h3 className="text-lg font-bold text-home-heading mb-4">
                     Recent Searches
                   </h3>
                   <div className="space-y-2">
                     {searchHistory.map((item, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border border-[#dfdeda] rounded-lg hover:bg-[#f4f2ee]">
+                      <div key={index} className="flex items-center justify-between p-3 border border-home-border rounded-lg hover:bg-home-surface-elevated">
                         <div>
-                          <div className="font-medium text-[#3b3a39]">{item.keyword}</div>
-                          <div className="text-xs text-[#6e6d6b]">{item.timestamp}</div>
+                          <div className="font-medium text-home-heading">{item.keyword}</div>
+                          <div className="text-xs text-home-muted">{item.timestamp}</div>
                         </div>
                         <div className="text-right">
-                          <div className="text-sm text-[#3b3a39]">{item.tweetsCount} tweets</div>
+                          <div className="text-sm text-home-heading">{item.tweetsCount} tweets</div>
                           <div className={`text-xs px-2 py-1 rounded ${getRiskColor(item.riskLevel)}`}>
                             {item.riskLevel.toUpperCase()}
                           </div>
@@ -1183,14 +1188,6 @@ export const DetectionPage = (): React.JSX.Element => {
               </div>
             </div>
           )}
-          
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="w-full bg-white border-t border-[#dfdeda] py-3 sm:py-4 px-4 sm:px-8 text-center text-[#6e6d6b] text-xs sm:text-sm">
-        © {new Date().getFullYear()} TweetWatch — AI-Powered Social Media Analysis & Abuse Detection System.
-      </footer>
-    </div>
+    </AppLayout>
   );
 };

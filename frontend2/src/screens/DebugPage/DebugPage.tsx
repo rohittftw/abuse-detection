@@ -1,4 +1,5 @@
 import  { useState } from 'react';
+import { Database, Twitter } from 'lucide-react';
 import Navbar from "../../components/layout/Navbar";
 
 export default function DebugButtons() {
@@ -35,7 +36,7 @@ export default function DebugButtons() {
                 : 'text-gray-700 hover:text-blue-600 hover:bg-gray-100'
             }`}
           >
-            🐦 Twitter API
+            <Twitter className="mr-1.5 inline-block h-4 w-4 -mt-0.5" /> Twitter API
           </button>
           <button
             onClick={() => setDataSource('database')}
@@ -45,7 +46,7 @@ export default function DebugButtons() {
                 : 'text-gray-700 hover:text-green-600 hover:bg-gray-100'
             }`}
           >
-            💾 Database
+            <Database className="mr-1.5 inline-block h-4 w-4 -mt-0.5" /> Database
           </button>
         </div>
         <p className="mt-2 text-sm text-gray-600">
@@ -67,7 +68,7 @@ export default function DebugButtons() {
                   : 'text-gray-700 hover:text-blue-600 hover:bg-gray-100'
               }`}
             >
-              🐦 Twitter API
+              <Twitter className="mr-1.5 inline-block h-4 w-4 -mt-0.5" /> Twitter API
             </button>
             <button
               onClick={() => setDataSource('database')}
@@ -77,7 +78,7 @@ export default function DebugButtons() {
                   : 'text-gray-700 hover:text-green-600 hover:bg-gray-100'
               }`}
             >
-              💾 Database
+              <Database className="mr-1.5 inline-block h-4 w-4 -mt-0.5" /> Database
             </button>
           </div>
 
@@ -130,7 +131,7 @@ Button classes for Database: ${
               cursor: 'pointer'
             }}
           >
-            🐦 Twitter API
+            <Twitter className="mr-1.5 inline-block h-4 w-4 -mt-0.5" /> Twitter API
           </button>
           <button
             onClick={() => setDataSource('database')}
@@ -145,7 +146,7 @@ Button classes for Database: ${
               cursor: 'pointer'
             }}
           >
-            💾 Database
+            <Database className="mr-1.5 inline-block h-4 w-4 -mt-0.5" /> Database
           </button>
         </div>
       </div>
