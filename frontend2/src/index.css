@@ -2,3 +2,308 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ------------------------------------------------------------------
+   WorkSpan-inspired design system
+   Navy #010F30 · Royal blue #2F4BFF · Purple #A948E3 · Cream #FAF8F3
+   ------------------------------------------------------------------ */
+
+:root {
+  --color-bg: #faf8f3;
+  --color-surface: #ffffff;
+  --color-surface-soft: #f4f1ea;
+  --color-text-primary: #010f30;
+  --color-text-secondary: #3d4763;
+  --color-text-tertiary: #6b7489;
+  --color-border: #e7e2d8;
+  --color-border-strong: #c9c2b4;
+  --color-hover-bg: #010f3008;
+  --color-shadow: #010f3014;
+  --color-accent-bg: #e8ecff;
+  --color-accent-text: #2f4bff;
+  --color-success: #0e9f6e;
+  --color-backdrop: #010f3066;
+  --sidebar-width: 280px;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --color-bg: #060d22;
+  --color-surface: #0c1733;
+  --color-surface-soft: #132142;
+  --color-text-primary: #f5f7ff;
+  --color-text-secondary: #c6cde0;
+  --color-text-tertiary: #8c97b3;
+  --color-border: #1e2b4a;
+  --color-border-strong: #31406a;
+  --color-hover-bg: #f5f7ff0f;
+  --color-shadow: #0000004d;
+  --color-accent-bg: #16224a;
+  --color-accent-text: #8fa1ff;
+  --color-backdrop: #0000008c;
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply font-sans antialiased;
+    line-height: 1.6;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply text-portfolio-primary;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  body.sb-lock-scroll {
+    overflow: hidden;
+  }
+}
+
+@layer components {
+  .tw-card {
+    @apply bg-portfolio-surface border border-portfolio-border rounded-2xl;
+  }
+
+  .tw-card-hover {
+    @apply tw-card transition-all duration-300 hover:bg-portfolio-hover hover:shadow-card hover:-translate-y-0.5;
+  }
+
+  .tw-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-portfolio-primary text-portfolio-bg px-6 py-3 rounded-lg font-medium text-sm transition-all duration-200 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .tw-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 bg-portfolio-surface text-portfolio-primary border border-portfolio-border px-6 py-3 rounded-lg font-medium text-sm transition-colors duration-200 hover:bg-portfolio-surface-soft disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .tw-input {
+    @apply w-full px-4 py-3 bg-portfolio-surface border border-portfolio-border rounded-lg text-portfolio-primary placeholder:text-portfolio-tertiary focus:outline-none focus:ring-2 focus:ring-portfolio-border-strong focus:border-portfolio-border-strong text-sm;
+  }
+
+  .tw-tag {
+    @apply inline-block bg-portfolio-accent text-portfolio-accent-text border border-portfolio-border rounded-full px-3 py-1 text-xs font-medium;
+  }
+
+  .tw-page-title {
+    @apply text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-portfolio-primary mb-3 leading-[1.1];
+  }
+
+  .tw-page-subtitle {
+    @apply text-sm sm:text-base text-portfolio-secondary font-normal max-w-3xl;
+  }
+
+  .tw-section-heading {
+    @apply text-lg sm:text-xl font-semibold text-portfolio-primary;
+  }
+
+  .tw-spinner {
+    @apply animate-spin rounded-full border-2 border-portfolio-primary border-t-transparent;
+  }
+}
+
+/* ---------------------------- Home theme ---------------------------- */
+
+.home-page {
+  --home-bg: #faf8f3;
+  --home-surface: #ffffff;
+  --home-surface-elevated: #f4f1ea;
+  --home-heading: #010f30;
+  --home-body: #3d4763;
+  --home-muted: #6b7489;
+  --home-border: #e7e2d8;
+  --home-accent: #2f4bff;
+  --home-accent-hover: #1f38e0;
+  --home-accent-soft: #e8ecff;
+  --home-purple: #a948e3;
+  --home-purple-hover: #9333d1;
+  --home-lavender: #f3edfb;
+  --home-navy: #010f30;
+  --home-mint: #e8f5f1;
+  --home-blue-soft: #eef1ff;
+}
+
+:root[data-theme="dark"] .home-page {
+  --home-bg: #060d22;
+  --home-surface: #0c1733;
+  --home-surface-elevated: #132142;
+  --home-heading: #f5f7ff;
+  --home-body: #c6cde0;
+  --home-muted: #8c97b3;
+  --home-border: #1e2b4a;
+  --home-accent: #8fa1ff;
+  --home-accent-hover: #aebcff;
+  --home-accent-soft: #16224a;
+  --home-purple: #b96bea;
+  --home-purple-hover: #c987f2;
+  --home-lavender: #1a1436;
+  --home-navy: #030a1c;
+  --home-mint: #0f2a26;
+  --home-blue-soft: #131e42;
+}
+
+.home-page h1,
+.home-page h2,
+.home-page h3 {
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  letter-spacing: -0.025em;
+}
+
+.home-page .tw-card {
+  @apply bg-home-surface border border-home-border rounded-2xl;
+}
+
+.home-page .tw-btn-primary {
+  @apply inline-flex items-center justify-center gap-2 bg-home-purple hover:bg-home-purple-hover text-white px-6 py-3 rounded-lg font-medium text-sm transition-all duration-200 shadow-[0_8px_24px_-8px_rgba(169,72,227,0.65)] hover:shadow-[0_10px_30px_-6px_rgba(169,72,227,0.55)] disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.home-page .tw-btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 bg-transparent text-home-heading border border-home-border px-6 py-3 rounded-lg font-medium text-sm transition-colors hover:bg-home-surface-elevated disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.home-page .tw-input {
+  @apply w-full px-4 py-3 bg-home-surface border border-home-border rounded-lg text-home-heading placeholder:text-home-muted focus:outline-none focus:ring-2 focus:ring-home-accent focus:border-home-accent text-sm;
+}
+
+.home-page .tw-page-title {
+  @apply text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-home-heading mb-3 leading-[1.08];
+}
+
+.home-page .tw-page-subtitle {
+  @apply text-sm sm:text-base text-home-muted max-w-3xl leading-relaxed;
+}
+
+.home-page .tw-spinner {
+  @apply animate-spin rounded-full border-2 border-home-purple border-t-transparent;
+}
+
+.home-page .tw-alert-error {
+  @apply bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-red-800 dark:text-red-300;
+}
+
+.home-page .tw-progress-track {
+  @apply w-full bg-home-border rounded-full h-2;
+}
+
+.home-page .tw-progress-bar {
+  @apply bg-home-purple h-2 rounded-full transition-all duration-1000;
+}
+
+/* ---------------------- WorkSpan-style utilities --------------------- */
+
+.ws-eyebrow {
+  @apply inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-home-accent;
+}
+
+.ws-display {
+  @apply text-4xl sm:text-5xl lg:text-[3.6rem] font-semibold leading-[1.06] tracking-[-0.035em] text-home-heading;
+}
+
+.ws-accent {
+  color: var(--home-accent);
+}
+
+.ws-purple {
+  color: var(--home-purple);
+}
+
+.ws-card {
+  @apply bg-home-surface border border-home-border rounded-2xl;
+}
+
+.ws-pill {
+  @apply inline-flex items-center gap-1.5 rounded-full bg-home-accent-soft px-3 py-1 text-xs font-semibold text-home-accent;
+}
+
+.ws-btn-purple {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-medium text-white transition-all duration-200;
+  background-image: linear-gradient(105deg, #b552e8 0%, #a948e3 55%, #8f3bd9 100%);
+  box-shadow: 0 10px 28px -10px rgba(169, 72, 227, 0.7);
+}
+
+.ws-btn-purple:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 14px 34px -10px rgba(169, 72, 227, 0.65);
+}
+
+.ws-btn-navy {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg bg-home-heading px-6 py-3 text-sm font-medium text-home-bg transition-opacity duration-200 hover:opacity-90;
+}
+
+.ws-btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg border border-home-border px-6 py-3 text-sm font-medium text-home-heading transition-colors duration-200 hover:bg-home-surface-elevated;
+}
+
+.ws-announcement {
+  background: linear-gradient(90deg, #2f4bff 0%, #3b5bff 50%, #2f4bff 100%);
+}
+
+.ws-nav-link {
+  @apply text-sm font-medium text-white/80 transition-colors hover:text-white;
+}
+
+.ws-footer-link {
+  @apply text-sm text-white/65 transition-colors hover:text-white;
+}
+
+.ws-section-lavender {
+  background: linear-gradient(180deg, var(--home-lavender) 0%, transparent 100%);
+}
+
+.ws-grid-lines {
+  background-image:
+    linear-gradient(to right, rgba(1, 15, 48, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(1, 15, 48, 0.045) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+:root[data-theme="dark"] .ws-grid-lines {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+}
+
+.ws-noise {
+  background-image: radial-gradient(rgba(1, 15, 48, 0.12) 0.6px, transparent 0.6px);
+  background-size: 7px 7px;
+}
+
+/* Subtle entrance animation used on marketing sections */
+@keyframes ws-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ws-rise {
+  animation: ws-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ws-rise-delay-1 {
+  animation-delay: 0.08s;
+}
+
+.ws-rise-delay-2 {
+  animation-delay: 0.16s;
+}
+
+.ws-rise-delay-3 {
+  animation-delay: 0.24s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ws-rise {
+    animation: none;
+  }
+}
