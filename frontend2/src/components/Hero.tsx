@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import HomeNavbar from "./home/HomeNavbar";
 import AppFooter from "./layout/AppFooter";
+import { LogoMark } from "./Logo";
 
 const stats = [
   {
@@ -141,9 +142,7 @@ const DashboardMock = (): React.JSX.Element => (
         {/* App sidebar */}
         <aside className="hidden flex-col border-r border-home-border bg-home-surface-elevated/40 p-4 sm:flex">
           <div className="mb-6 flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-[#b552e8] to-[#8f3bd9]">
-              <ShieldCheck className="h-3.5 w-3.5 text-white" />
-            </span>
+            <LogoMark size={24} />
             <span className="text-xs font-bold text-home-heading">TweetWatch</span>
           </div>
           <nav className="space-y-1 text-[11px]">

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "../../hooks/useTheme";
+import { LogoMark } from "../Logo";
 
 const navItems = [
   { path: "/", label: "home" },
@@ -72,11 +73,7 @@ export const Sidebar = (): React.JSX.Element => {
         aria-label="site navigation"
       >
         <div className="mb-8">
-          <div className="w-16 h-16 rounded-full border-2 border-portfolio-primary bg-portfolio-surface-soft flex items-center justify-center mb-4">
-            <svg className="w-8 h-8 text-portfolio-primary" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 1L3 5V11C3 16.55 6.84 21.74 12 23C17.16 21.74 21 16.55 21 11V5L12 1Z" />
-            </svg>
-          </div>
+          <LogoMark size={56} className="mb-4" />
           <p className="font-serif text-xl font-bold text-portfolio-primary mb-1">TweetWatch</p>
           <p className="text-sm text-portfolio-tertiary">ai content moderation</p>
         </div>

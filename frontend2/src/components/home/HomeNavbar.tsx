@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ArrowRight, Menu, Moon, ShieldCheck, Sun, X } from "lucide-react";
+import { ArrowRight, Menu, Moon, Sun, X } from "lucide-react";
 import { useTheme } from "../../hooks/useTheme";
+import { LogoMark } from "../Logo";
 
 const navLinks = [
   { label: "Analysis", path: "/detection" },
@@ -41,9 +42,7 @@ export const HomeNavbar = (): React.JSX.Element => {
           <div className="flex h-16 items-center justify-between lg:grid lg:grid-cols-[1fr_auto_1fr] lg:gap-8">
             {/* Logo */}
             <Link to="/" className="flex shrink-0 items-center gap-2.5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-gradient-to-br from-[#b552e8] to-[#8f3bd9]">
-                <ShieldCheck className="h-[18px] w-[18px] text-white" strokeWidth={2.2} />
-              </span>
+              <LogoMark size={32} />
               <span className="text-lg font-bold tracking-tight text-white whitespace-nowrap">
                 TweetWatch
               </span>

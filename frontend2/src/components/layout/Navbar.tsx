@@ -1,51 +1,39 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React from "react";
+import { Link, useLocation } from "react-router-dom";
+import { LogoMark } from "../Logo";
 
 export const Navbar = (): React.JSX.Element => {
   const location = useLocation();
 
-  const isActive = (path: string) => {
-    return location.pathname === path;
-  };
+  const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="w-full bg-white border-b border-[#dfdeda] py-3 sm:py-4 px-4 sm:px-8 flex items-center justify-between">
-      <div className="text-xl sm:text-2xl font-bold [font-family:'Lexend_Deca',Helvetica] text-[#3b3a39]">
-        TweetWatch
-      </div>
+    <nav className="w-full bg-portfolio-surface border-b border-portfolio-border py-3 sm:py-4 px-4 sm:px-8 flex items-center justify-between">
+      <Link to="/" className="flex items-center gap-2.5">
+        <LogoMark size={30} />
+        <span className="text-xl font-bold tracking-tight text-portfolio-primary">
+          TweetWatch
+        </span>
+      </Link>
       <div className="flex gap-3 sm:gap-6 text-sm sm:text-base">
-        <Link 
-          to="/" 
-          className={`font-medium hover:text-[#3b3a39] hover:underline ${
-            isActive('/') ? 'text-[#3b3a39] underline' : 'text-[#6e6d6b]'
-          }`}
-        >
-          Home
-        </Link>
-        <Link 
-          to="/detection" 
-          className={`font-medium hover:text-[#3b3a39] hover:underline ${
-            isActive('/detection') ? 'text-[#3b3a39] underline' : 'text-[#6e6d6b]'
-          }`}
-        >
-          Analysis
-        </Link>
-        <Link 
-          to="/reports" 
-          className={`font-medium hover:text-[#3b3a39] hover:underline ${
-            isActive('/reports') ? 'text-[#3b3a39] underline' : 'text-[#6e6d6b]'
-          }`}
-        >
-          Reports
-        </Link>
-        <Link 
-          to="/about" 
-          className={`font-medium hover:text-[#3b3a39] hover:underline ${
-            isActive('/about') ? 'text-[#3b3a39] underline' : 'text-[#6e6d6b]'
-          }`}
-        >
-          About
-        </Link>
+        {[
+          { path: "/", label: "home" },
+          { path: "/detection", label: "analysis" },
+          { path: "/reports", label: "reports" },
+          { path: "/about", label: "about" },
+        ].map((item) => (
+          <Link
+            key={item.path}
+            to={item.path}
+            className={`font-medium transition-colors duration-200 ${
+              isActive(item.path)
+                ? "text-portfolio-primary underline"
+                : "text-portfolio-secondary hover:text-portfolio-primary hover:underline"
+            }`}
+          >
+            {item.label}
+          </Link>
+        ))}
       </div>
     </nav>
   );

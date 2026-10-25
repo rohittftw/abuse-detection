@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Github, Linkedin, ShieldCheck, Twitter, Youtube } from "lucide-react";
+import { Github, Linkedin, Twitter, Youtube } from "lucide-react";
+import { LogoMark } from "../Logo";
 
 const columns = [
   {
@@ -47,9 +48,7 @@ export const AppFooter = (): React.JSX.Element => (
       <div className="grid gap-10 lg:grid-cols-[1.2fr_2fr]">
         <div>
           <Link to="/" className="inline-flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-gradient-to-br from-[#b552e8] to-[#8f3bd9]">
-              <ShieldCheck className="h-5 w-5 text-white" strokeWidth={2.2} />
-            </span>
+            <LogoMark size={36} />
             <span className="text-lg font-bold tracking-tight text-white">TweetWatch</span>
           </Link>
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/60">
