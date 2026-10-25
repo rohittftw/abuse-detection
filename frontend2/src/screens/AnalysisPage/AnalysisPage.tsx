@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { BadgeCheck, BarChart3, Heart, Link2, MessageCircle, Repeat2 } from "lucide-react";
 import AppLayout from "../../components/layout/AppLayout";
 import PageHeader from "../../components/home/PageHeader";
@@ -21,6 +21,7 @@ interface TweetAnalysis {
     quote_count: number;
   };
   lang: string;
+  hashtags?: string[];
   analysis: {
     sentiment: Array<{ label: string; score: number }>;
     abuse: Array<{ label: string; score: number }>;
@@ -45,6 +46,7 @@ interface ApiResponse {
     result_count: number;
     total_fetched: number;
     failed_analysis: number;
+    analysis_available?: boolean;
     query: string;
   };
   query_info: {
@@ -67,8 +69,20 @@ export const AnalysisPage = (): React.JSX.Element => {
   const [error, setError] = useState<string | null>(null);
   const [showIndividualTweets, setShowIndividualTweets] = useState(false);
 
-  // Fetch data from backend
-  const fetchAnalysisData = async () => {
+  // Fetch data from backend. A topic button passes its own term so the
+  // request does not depend on the state update having landed yet.
+  const fetchAnalysisData = async (searchTerm?: string) => {
+    const effectiveQuery = (searchTerm ?? query).trim();
+
+    if (!effectiveQuery) {
+      setError('Enter a topic, keyword, or hashtag to analyze.');
+      return;
+    }
+
+    if (searchTerm !== undefined) {
+      setQuery(searchTerm);
+    }
+
     setLoading(true);
     setError(null);
     
@@ -79,7 +93,7 @@ export const AnalysisPage = (): React.JSX.Element => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          query: query,
+          query: effectiveQuery,
           maxResults: maxResults,
           saveToDb: true
         })
@@ -109,7 +123,7 @@ export const AnalysisPage = (): React.JSX.Element => {
       case 'positive': return "text-green-600 bg-green-50 border-green-200";
       case 'negative': return "text-red-600 bg-red-50 border-red-200";
       case 'neutral': return "text-orange-600 bg-orange-50 border-orange-200";
-      default: return "text-gray-600 bg-home-surface-elevated border-gray-200";
+      default: return "text-home-heading bg-home-surface-elevated border-home-border";
     }
   };
 
@@ -117,13 +131,40 @@ export const AnalysisPage = (): React.JSX.Element => {
     switch (riskLevel.toLowerCase()) {
       case 'high': return "text-red-600 bg-red-50 border-red-200";
       case 'low': return "text-green-600 bg-green-50 border-green-200";
-      default: return "text-gray-600 bg-home-surface-elevated border-gray-200";
+      case 'unknown': return "text-home-heading bg-home-surface-elevated border-home-border";
+      default: return "text-home-heading bg-home-surface-elevated border-home-border";
     }
   };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
   };
+
+  // Topics actually present in this batch. Uses the hashtags returned by the
+  // API, with a text fallback for older responses.
+  const topics = useMemo(() => {
+    if (!analyticsData) return [];
+
+    const counts = new Map<string, number>();
+
+    analyticsData.data.forEach((tweet) => {
+      const tags = tweet.hashtags?.length
+        ? tweet.hashtags
+        : Array.from(tweet.text.matchAll(/#(\w+)/g)).map((match) => match[1]);
+
+      tags.forEach((tag) => {
+        const clean = tag.replace(/^#/, '').trim().toLowerCase();
+        if (clean) {
+          counts.set(clean, (counts.get(clean) || 0) + 1);
+        }
+      });
+    });
+
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 12)
+      .map(([topic]) => topic);
+  }, [analyticsData]);
 
 
   return (
@@ -154,7 +195,7 @@ export const AnalysisPage = (): React.JSX.Element => {
                 <option value={50}>50 tweets</option>
               </select>
               <button
-                onClick={fetchAnalysisData}
+                onClick={() => fetchAnalysisData()}
                 disabled={loading}
                 className="tw-btn-primary py-2"
               >
@@ -162,6 +203,37 @@ export const AnalysisPage = (): React.JSX.Element => {
               </button>
             </div>
           </div>
+
+          {topics.length > 0 && (
+            <div className="mb-6 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-home-muted">
+                Topics in these tweets
+              </span>
+              {topics.map((topic) => (
+                <button
+                  key={topic}
+                  type="button"
+                  onClick={() => fetchAnalysisData(`#${topic}`)}
+                  disabled={loading}
+                  className="ws-pill transition-colors hover:bg-home-accent hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  title={`Analyze #${topic}`}
+                >
+                  #{topic}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {analyticsData?.meta.analysis_available === false && (
+            <div className="tw-alert-error mb-6">
+              <p className="font-medium">Analysis service unavailable</p>
+              <p className="text-sm mt-1 opacity-90">
+                The sentiment and abuse models returned no scores for these
+                tweets, so they are marked UNKNOWN instead of LOW. Check the
+                Hugging Face token, credits, or service status.
+              </p>
+            </div>
+          )}
 
           {error && (
             <div className="tw-alert-error mb-6">
@@ -425,7 +497,7 @@ export const AnalysisPage = (): React.JSX.Element => {
                 <h3 className="text-xl font-bold text-home-heading mb-2">No Analysis Data</h3>
                 <p className="text-home-muted mb-4">Enter a query and click "Analyze" to get started</p>
                 <button
-                  onClick={fetchAnalysisData}
+                  onClick={() => fetchAnalysisData()}
                   className="tw-btn-primary"
                 >
                   Analyze Tweets

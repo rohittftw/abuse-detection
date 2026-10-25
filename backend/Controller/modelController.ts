@@ -3,13 +3,23 @@ import { TweetService } from '../services/tweetService';
 import { DemoTweetService } from '../services/demoTweetService';
 import { Tweet } from '../models/tweet';
 
-const HUGGINGFACE_API_TOKEN = process.env.HUGGINGFACE_API_TOKEN;
-if (!HUGGINGFACE_API_TOKEN) {
-  console.warn('HUGGINGFACE_API_TOKEN not set in environment variables. API requests may fail.');
-}
+// Hugging Face retired api-inference.huggingface.co; the router endpoint is the
+// current serverless inference URL.
+const HF_INFERENCE_BASE_URL = 'https://router.huggingface.co/hf-inference/models';
 
 const ABUSE_MODEL_ID = 'cardiffnlp/twitter-roberta-base-hate-latest';
 const SENTIMENT_MODEL_ID = 'cardiffnlp/twitter-roberta-base-sentiment-latest';
+
+// Read the token at call time so dotenv has definitely run, even if this
+// module is imported before server.ts calls dotenv.config().
+const getHuggingFaceToken = (): string | undefined =>
+  process.env.HUGGINGFACE_API_TOKEN;
+
+if (!getHuggingFaceToken()) {
+  console.warn(
+    'HUGGINGFACE_API_TOKEN not set in environment variables. API requests may fail.'
+  );
+}
 
 declare global {
   // Round-robin index across the configured Twitter bearer tokens.
@@ -17,52 +27,78 @@ declare global {
   var currentTokenIndex: number | undefined;
 }
 
+/**
+ * Calls the Hugging Face serverless inference router.
+ * Returns the raw prediction array, e.g. [{ label, score }, ...].
+ */
+const callHuggingFace = async (
+  modelId: string,
+  text: string
+): Promise<{ label: string; score: number }[]> => {
+  const token = getHuggingFaceToken();
+
+  if (!token) {
+    throw new Error('HUGGINGFACE_API_TOKEN is not configured');
+  }
+
+  const response = await axios.post(
+    `${HF_INFERENCE_BASE_URL}/${modelId}`,
+    { inputs: text },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      timeout: 30000,
+    }
+  );
+
+  // Serverless inference returns [[{ label, score }, ...]] for text
+  // classification. Accept the flat shape too, in case a model is wrapped.
+  const payload = response.data;
+  const predictions = Array.isArray(payload?.[0]) ? payload[0] : payload;
+
+  if (!Array.isArray(predictions)) {
+    throw new Error('Unexpected Hugging Face response shape');
+  }
+
+  return predictions;
+};
+
+const logHuggingFaceError = (modelId: string, error: unknown): void => {
+  if (axios.isAxiosError(error)) {
+    console.error('Hugging Face API error:', {
+      model: modelId,
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
+    return;
+  }
+
+  console.error('Hugging Face request failed:', modelId, error);
+};
+
 export const predictAbuse = async (text: string) => {
   try {
     console.log('Sending abuse detection request to Hugging Face:', {
       model: ABUSE_MODEL_ID,
-      text: text.substring(0, 50) + '...' // Log first 50 chars for privacy
+      text: text.substring(0, 50) + '...', // Log first 50 chars for privacy
     });
 
-    const response = await axios.post(
-      `https://api-inference.huggingface.co/models/${ABUSE_MODEL_ID}`,
-      { inputs: text },
-      {
-        headers: {
-          'Authorization': `Bearer ${HUGGINGFACE_API_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    const predictions = await callHuggingFace(ABUSE_MODEL_ID, text);
 
-    console.log('Abuse detection response:', {
-      status: response.status,
-      data: response.data
-    });
+    console.log(`Abuse detection response: ${predictions.length} label(s)`);
 
     // Transform the response to match the expected format
-    const result = response.data[0].map((item: any) => ({
+    const result = predictions.map((item) => ({
       label: item.label === 'HATE' ? 'HATE' : 'NOT_HATE',
-      score: item.score
+      score: item.score,
     }));
 
     return { result };
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error('Hugging Face API Error:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        config: {
-          url: error.config?.url,
-          headers: {
-            ...error.config?.headers,
-            Authorization: 'Bearer [REDACTED]' // Don't log the actual token
-          }
-        }
-      });
-    } else {
-      console.error('Error in predictAbuse:', error);
-    }
+    logHuggingFaceError(ABUSE_MODEL_ID, error);
     throw new Error('Error communicating with Hugging Face abuse model');
   }
 };
@@ -71,48 +107,22 @@ export const predictSentiment = async (text: string) => {
   try {
     console.log('Sending sentiment analysis request to Hugging Face:', {
       model: SENTIMENT_MODEL_ID,
-      text: text.substring(0, 50) + '...' // Log first 50 chars for privacy
+      text: text.substring(0, 50) + '...', // Log first 50 chars for privacy
     });
 
-    const response = await axios.post(
-      `https://api-inference.huggingface.co/models/${SENTIMENT_MODEL_ID}`,
-      { inputs: text },
-      {
-        headers: {
-          'Authorization': `Bearer ${HUGGINGFACE_API_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    const predictions = await callHuggingFace(SENTIMENT_MODEL_ID, text);
 
-    console.log('Sentiment analysis response:', {
-      status: response.status,
-      data: response.data
-    });
+    console.log(`Sentiment analysis response: ${predictions.length} label(s)`);
 
     // Transform the response to match the expected format
-    const result = response.data[0].map((item: any) => ({
+    const result = predictions.map((item) => ({
       label: item.label.toUpperCase(),
-      score: item.score
+      score: item.score,
     }));
 
     return { result };
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error('Hugging Face API Error:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        config: {
-          url: error.config?.url,
-          headers: {
-            ...error.config?.headers,
-            Authorization: 'Bearer [REDACTED]' // Don't log the actual token
-          }
-        }
-      });
-    } else {
-      console.error('Error in predictSentiment:', error);
-    }
+    logHuggingFaceError(SENTIMENT_MODEL_ID, error);
     throw new Error('Error communicating with Hugging Face sentiment model');
   }
 };
@@ -227,9 +237,18 @@ export const fetchTweetsByHashtag = async (
             }),
             predictAbuse(tweet.text).catch((err) => {
               console.error("Abuse detection failed:", err);
-              return { result: [{ label: "NOT_HATE", score: 0 }] };
+              // Do not pretend a failed call means "not hate"; mark it unknown.
+              return { result: [{ label: "UNKNOWN", score: 0 }] };
             }),
           ]);
+
+          const abuseLabel = abuseResult.result[0]?.label;
+          const riskLevel =
+            abuseLabel === "HATE"
+              ? "high"
+              : abuseLabel === "UNKNOWN" || abuseLabel === "ERROR"
+                ? "unknown"
+                : "low";
 
           return {
             id: tweet.id,
@@ -248,11 +267,14 @@ export const fetchTweetsByHashtag = async (
               quoteCount: tweet.public_metrics?.quote_count || 0
             },
             lang: tweet.lang || "en",
+            // Hashtags let the UI offer topic shortcuts for this batch.
+            hashtags: Array.isArray(tweet.hashtags)
+              ? tweet.hashtags
+              : (tweet.entities?.hashtags || []).map((tag: any) => tag.tag),
             analysis: {
               sentiment: sentimentResult.result,
               abuse: abuseResult.result,
-              risk_level:
-                abuseResult.result[0]?.label === "HATE" ? "high" : "low",
+              risk_level: riskLevel,
               confidence: Math.max(
                 sentimentResult.result[0]?.score || 0,
                 abuseResult.result[0]?.score || 0
@@ -319,11 +341,16 @@ export const fetchTweetsByHashtag = async (
     }
 
     function aggregateRiskLevel(resultsArr: any[]) {
-      return resultsArr.some(
-        (tweet) => tweet.analysis && tweet.analysis.risk_level === "high"
-      )
-        ? "high"
-        : "low";
+      const levels = resultsArr
+        .map((tweet) => tweet.analysis?.risk_level)
+        .filter(Boolean);
+
+      if (levels.includes("high")) return "high";
+      // If every classifier call failed, do not report a reassuring "low".
+      if (levels.length === 0 || levels.every((level) => level === "unknown")) {
+        return "unknown";
+      }
+      return "low";
     }
 
     function aggregateConfidence(resultsArr: any[]) {
@@ -360,13 +387,21 @@ export const fetchTweetsByHashtag = async (
       overall_abuse: dominantAbuse.label,
     };
 
+    // A per-tweet catch keeps the request alive when Hugging Face is down, so
+    // rejected promises alone under-report failures. Count the tweets that
+    // came back without a real score.
+    const unscoredTweets = successfulResults.filter(
+      (tweet) => tweet.analysis?.abuse?.[0]?.label === "UNKNOWN"
+    ).length;
+
     const processedResponse = {
       data: successfulResults,
       overall: overallAnalysis,
       meta: {
         result_count: successfulResults.length,
         total_fetched: tweets.length,
-        failed_analysis: failedCount,
+        failed_analysis: failedCount + unscoredTweets,
+        analysis_available: unscoredTweets < successfulResults.length,
         query: query,
       },
       query_info: {
@@ -501,11 +536,18 @@ export const reanalyzeTweet = async (tweet: any, userId: string) => {
 
     console.log('New analysis results:', { sentimentResult, abuseResult });
 
+    const abuseLabel = abuseResult.result[0]?.label?.toUpperCase();
+
     // Create new analysis result
     const newAnalysis = {
       sentiment: sentimentResult.result,
       abuse: abuseResult.result,
-      risk_level: abuseResult.result[0]?.label.toUpperCase() === 'HATE' ? 'high' : 'low',
+      risk_level:
+        abuseLabel === 'HATE'
+          ? 'high'
+          : abuseLabel === 'UNKNOWN' || abuseLabel === 'ERROR'
+            ? 'unknown'
+            : 'low',
       confidence: Math.max(
         sentimentResult.result[0]?.score || 0,
         abuseResult.result[0]?.score || 0
@@ -574,14 +616,22 @@ export const reanalyzeSessionTweets = async (sessionName: string, userId: string
             }),
             predictAbuse(tweet.text).catch(err => {
               console.error('Abuse detection failed:', err);
-              return { result: [{ label: 'NOT_HATE', score: 0 }] };
+              return { result: [{ label: 'UNKNOWN', score: 0 }] };
             })
           ]);
+
+          const abuseLabel = abuseResult.result[0]?.label?.toUpperCase();
+          const riskLevel =
+            abuseLabel === 'HATE'
+              ? 'high'
+              : abuseLabel === 'UNKNOWN' || abuseLabel === 'ERROR'
+                ? 'unknown'
+                : 'low';
 
           const newAnalysis = {
             sentiment: sentimentResult.result,
             abuse: abuseResult.result,
-            risk_level: abuseResult.result[0]?.label.toUpperCase() === 'HATE' ? 'high' : 'low',
+            risk_level: riskLevel,
             confidence: Math.max(
               sentimentResult.result[0]?.score || 0,
               abuseResult.result[0]?.score || 0

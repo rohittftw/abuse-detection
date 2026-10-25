@@ -35,10 +35,15 @@ export class DemoTweetService {
     const safeLimit = Math.max(1, Math.min(limit, 100));
     const tokens = tokenize(term);
 
+    // The analysis models are English-only, so never hand them non-English
+    // text. Multilingual rows can stay in the collection for later use.
+    const englishOnly = { lang: 'en' };
+
     let docs = tokens.length
       ? await DemoTweet.aggregate([
           {
             $match: {
+              ...englishOnly,
               $or: [
                 { hashtags: { $in: tokens } },
                 {
@@ -56,7 +61,10 @@ export class DemoTweetService {
       : [];
 
     if (docs.length === 0) {
-      docs = await DemoTweet.aggregate([{ $sample: { size: safeLimit } }]);
+      docs = await DemoTweet.aggregate([
+        { $match: englishOnly },
+        { $sample: { size: safeLimit } },
+      ]);
     }
 
     const usersById = new Map<string, any>();
@@ -81,6 +89,7 @@ export class DemoTweetService {
           quote_count: doc.publicMetrics.quoteCount || 0,
         },
         lang: doc.lang,
+        hashtags: doc.hashtags || [],
       };
     });
 
