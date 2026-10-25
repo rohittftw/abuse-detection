@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { TweetService } from '../services/tweetService';
+import { DemoTweetService } from '../services/demoTweetService';
 import { Tweet } from '../models/tweet';
 
 const HUGGINGFACE_API_TOKEN = process.env.HUGGINGFACE_API_TOKEN;
@@ -123,23 +124,16 @@ export const fetchTweetsByHashtag = async (
   userId: string,
   sessionName?: string
 ) => {
-  // Get multiple bearer tokens from environment variables
-  const BEARER_TOKEN_1 = process.env.TWITTER_BEARER_TOKEN_1;
-  const BEARER_TOKEN_2 = process.env.TWITTER_BEARER_TOKEN_2;
+  const bearerTokens = [
+    process.env.TWITTER_BEARER_TOKEN_1,
+    process.env.TWITTER_BEARER_TOKEN_2,
+  ].filter((token): token is string => Boolean(token));
 
-  // Store tokens in an array
-  const bearerTokens = [BEARER_TOKEN_1, BEARER_TOKEN_2].filter(token => token);
-
-  if (bearerTokens.length === 0) {
-    throw new Error("No Twitter Bearer Tokens set in environment variables");
-  }
-
-  // Get the next token using a simple round-robin approach
-  const currentTokenIndex = global.currentTokenIndex || 0;
-  const currentToken = bearerTokens[currentTokenIndex];
-  
-  // Update the index for next request
-  global.currentTokenIndex = (currentTokenIndex + 1) % bearerTokens.length;
+  // Demo mode is explicit, or implied when no Twitter credentials are set.
+  // The demo collection is shared and unowned; fetched tweets still become
+  // part of the caller's session below.
+  const useDemoTweets =
+    process.env.USE_DEMO_TWEETS === 'true' || bearerTokens.length === 0;
 
   // Clean hashtag - remove # if present
   const cleanHashtag = hashtag.startsWith("#") ? hashtag.slice(1) : hashtag;
@@ -160,22 +154,48 @@ export const fetchTweetsByHashtag = async (
   };
 
   try {
-    console.log(
-      `Fetching tweets for query: "${query}" with max_results: ${params.max_results}`
-    );
+    let tweets: any[] = [];
+    let users: any[] = [];
 
-    const response = await axios.get(url, {
-      headers: {
-        Authorization: `Bearer ${currentToken}`,
-        "Content-Type": "application/json",
-      },
-      params: params,
-    });
+    if (useDemoTweets) {
+      console.log(
+        `Fetching demo tweets for "${cleanHashtag}" with max_results: ${params.max_results}`
+      );
 
-    console.log(`Twitter API Response Status: ${response.status}`);
+      const demoResult = await DemoTweetService.fetchForQuery(
+        cleanHashtag,
+        params.max_results
+      );
 
-    const tweets = response.data.data || [];
-    const users = response.data.includes?.users || [];
+      tweets = demoResult.tweets;
+      users = demoResult.users;
+
+      console.log(`Loaded ${tweets.length} demo tweets`);
+    } else {
+      // Get the next token using a simple round-robin approach
+      const currentTokenIndex = global.currentTokenIndex || 0;
+      const currentToken = bearerTokens[currentTokenIndex];
+
+      // Update the index for next request
+      global.currentTokenIndex = (currentTokenIndex + 1) % bearerTokens.length;
+
+      console.log(
+        `Fetching tweets for query: "${query}" with max_results: ${params.max_results}`
+      );
+
+      const response = await axios.get(url, {
+        headers: {
+          Authorization: `Bearer ${currentToken}`,
+          "Content-Type": "application/json",
+        },
+        params: params,
+      });
+
+      console.log(`Twitter API Response Status: ${response.status}`);
+
+      tweets = response.data.data || [];
+      users = response.data.includes?.users || [];
+    }
 
     if (tweets.length === 0) {
       return {
@@ -381,7 +401,7 @@ export const fetchTweetsByHashtag = async (
         : null,
     };
   } catch (error) {
-    console.error("Twitter API Error:", error);
+    console.error("Tweet fetch error:", error);
 
     if (axios.isAxiosError(error)) {
       const status = error.response?.status;
