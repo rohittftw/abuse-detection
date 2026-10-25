@@ -67,7 +67,13 @@ router.post('/fetch-tweets', async (req: express.Request, res: express.Response)
 
     console.log(`Fetching tweets for search term: "${searchTerm}" with maxResults: ${maxResults}, saveToDb: ${saveToDb}, sessionName: ${sessionName || 'auto-generated'}`);
 
-    const tweets = await fetchTweetsByHashtag(searchTerm, maxResults, saveToDb, sessionName);
+    const tweets = await fetchTweetsByHashtag(
+      searchTerm,
+      maxResults,
+      saveToDb,
+      req.user!.id,
+      sessionName
+    );
     res.json(tweets);
   } catch (error: any) {
     console.error('Fetch tweets error:', error);
@@ -96,7 +102,7 @@ router.get('/tweets', async (req: express.Request, res: express.Response) => {
     if (startDate) filters.startDate = new Date(startDate as string);
     if (endDate) filters.endDate = new Date(endDate as string);
 
-    const result = await getTweetsFromDatabase(filters);
+    const result = await getTweetsFromDatabase(filters, req.user!.id);
     res.json(result);
   } catch (error: any) {
     console.error('Get tweets error:', error);
@@ -106,7 +112,7 @@ router.get('/tweets', async (req: express.Request, res: express.Response) => {
 
 router.get('/dashboard/stats', async (req: express.Request, res: express.Response) => {
   try {
-    const stats = await getDashboardStatistics();
+    const stats = await getDashboardStatistics(req.user!.id);
     res.json(stats);
   } catch (error: any) {
     console.error('Get dashboard stats error:', error);
@@ -161,7 +167,7 @@ router.get('/analytics/sentiment-analysis', async (req: express.Request, res: ex
 // Session-based endpoints
 router.get('/sessions', async (req: express.Request, res: express.Response) => {
   try {
-    const sessions = await getAllSessionNames();
+    const sessions = await getAllSessionNames(req.user!.id);
     res.json(sessions);
   } catch (error: any) {
     console.error('Get sessions error:', error);
@@ -172,7 +178,7 @@ router.get('/sessions', async (req: express.Request, res: express.Response) => {
 router.get('/sessions/:sessionName/tweets', async (req: express.Request, res: express.Response) => {
   try {
     const { sessionName } = req.params;
-    const result = await getTweetsBySessionName(sessionName);
+    const result = await getTweetsBySessionName(sessionName, req.user!.id);
     res.json(result);
   } catch (error: any) {
     console.error('Get tweets by session name error:', error);
@@ -183,7 +189,7 @@ router.get('/sessions/:sessionName/tweets', async (req: express.Request, res: ex
 router.get('/sessions/id/:sessionId/tweets', async (req: express.Request, res: express.Response) => {
   try {
     const { sessionId } = req.params;
-    const result = await getTweetsBySessionId(sessionId);
+    const result = await getTweetsBySessionId(sessionId, req.user!.id);
     res.json(result);
   } catch (error: any) {
     console.error('Get tweets by session ID error:', error);
@@ -195,13 +201,13 @@ router.get('/sessions/id/:sessionId/tweets', async (req: express.Request, res: e
 router.post('/tweets/:tweetId/reanalyze', async (req: express.Request, res: express.Response) => {
   try {
     const { tweetId } = req.params;
-    const tweet = await Tweet.findOne({ tweetId });
+    const tweet = await Tweet.findOne({ tweetId, userId: req.user!.id });
     
     if (!tweet) {
       return res.status(404).json({ error: 'Tweet not found' });
     }
 
-    const result = await reanalyzeTweet(tweet);
+    const result = await reanalyzeTweet(tweet, req.user!.id);
     res.json(result);
   } catch (error: any) {
     console.error('Reanalyze tweet error:', error);
@@ -212,7 +218,7 @@ router.post('/tweets/:tweetId/reanalyze', async (req: express.Request, res: expr
 router.post('/sessions/:sessionName/reanalyze', async (req: express.Request, res: express.Response) => {
   try {
     const { sessionName } = req.params;
-    const result = await reanalyzeSessionTweets(sessionName);
+    const result = await reanalyzeSessionTweets(sessionName, req.user!.id);
     res.json(result);
   } catch (error: any) {
     console.error('Reanalyze session tweets error:', error);

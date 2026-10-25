@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { BadgeCheck, BarChart3, Heart, Link2, MessageCircle, Repeat2 } from "lucide-react";
-import { API_ENDPOINTS } from "../../config/api";
+import { API_ENDPOINTS, apiFetch } from "../../config/api";
 import AppLayout from "../../components/layout/AppLayout";
 import PageHeader from "../../components/home/PageHeader";
 
@@ -102,7 +102,7 @@ export const DetectionPage = (): React.JSX.Element => {
       }
 
       console.log('Sending reanalysis request for session:', selectedSession.sessionName);
-      const response = await fetch(API_ENDPOINTS.REANALYZE_SESSION(selectedSession.sessionName), {
+      const response = await apiFetch(API_ENDPOINTS.REANALYZE_SESSION(selectedSession.sessionName), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -200,7 +200,7 @@ export const DetectionPage = (): React.JSX.Element => {
 
     setReanalyzing(prev => ({ ...prev, [tweetId]: true }));
     try {
-      const response = await fetch(API_ENDPOINTS.REANALYZE_TWEET(tweetId), {
+      const response = await apiFetch(API_ENDPOINTS.REANALYZE_TWEET(tweetId), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -279,7 +279,7 @@ export const DetectionPage = (): React.JSX.Element => {
   const fetchRecentSessions = async () => {
     setLoadingSessions(true);
     try {
-      const response = await fetch(API_ENDPOINTS.SESSIONS, {
+      const response = await apiFetch(API_ENDPOINTS.SESSIONS, {
         method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -309,7 +309,7 @@ export const DetectionPage = (): React.JSX.Element => {
     setSelectedSession(null);
 
     try {
-      const response = await fetch(API_ENDPOINTS.SESSION_TWEETS(sessionName), {
+      const response = await apiFetch(API_ENDPOINTS.SESSION_TWEETS(sessionName), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -464,7 +464,7 @@ export const DetectionPage = (): React.JSX.Element => {
 
      
       // Fetch real tweets from Twitter API
-      const response = await fetch(API_ENDPOINTS.FETCH_TWEETS, {
+      const response = await apiFetch(API_ENDPOINTS.FETCH_TWEETS, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

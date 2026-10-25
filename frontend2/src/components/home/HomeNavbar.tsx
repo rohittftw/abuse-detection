@@ -1,7 +1,16 @@
 import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { ArrowRight, Menu, Moon, Sun, X } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  ArrowRight,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Moon,
+  Sun,
+  X,
+} from "lucide-react";
 import { useTheme } from "../../hooks/useTheme";
+import { useAuth } from "../../context/AuthContext";
 import { LogoMark } from "../Logo";
 
 const navLinks = [
@@ -14,8 +23,16 @@ const navLinks = [
 
 export const HomeNavbar = (): React.JSX.Element => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    setMenuOpen(false);
+    navigate("/");
+  };
 
   const isActive = (path: string) => {
     if (path.startsWith("/#")) return false;
@@ -78,20 +95,49 @@ export const HomeNavbar = (): React.JSX.Element => {
                 )}
               </button>
 
-              <Link
-                to="/reports"
-                className="hidden px-3 py-2 text-sm font-medium text-white/85 transition-colors hover:text-white md:inline-flex"
-              >
-                Log in
-              </Link>
+              {user ? (
+                <>
+                  <Link
+                    to="/detection"
+                    className="hidden items-center gap-1.5 rounded-[7px] bg-[#2f4bff] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#1f38e0] sm:inline-flex"
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    Dashboard
+                  </Link>
 
-              <Link
-                to="/detection"
-                className="hidden items-center gap-1.5 rounded-[7px] bg-[#2f4bff] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#1f38e0] sm:inline-flex"
-              >
-                Book a demo
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+                  <div className="hidden items-center gap-2 md:flex">
+                    <span className="max-w-[150px] truncate text-sm font-medium text-white/80">
+                      {user.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="rounded-lg p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                      aria-label="Log out"
+                      title="Log out"
+                    >
+                      <LogOut className="h-[18px] w-[18px]" />
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className="hidden px-3 py-2 text-sm font-medium text-white/85 transition-colors hover:text-white md:inline-flex"
+                  >
+                    Log in
+                  </Link>
+
+                  <Link
+                    to="/signup"
+                    className="hidden items-center gap-1.5 rounded-[7px] bg-[#2f4bff] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#1f38e0] sm:inline-flex"
+                  >
+                    Get started
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </>
+              )}
 
               <button
                 type="button"
@@ -121,14 +167,39 @@ export const HomeNavbar = (): React.JSX.Element => {
                     {link.label}
                   </Link>
                 ))}
-                <Link
-                  to="/detection"
-                  onClick={() => setMenuOpen(false)}
-                  className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-[#2f4bff] px-3 py-2.5 text-center text-sm font-medium text-white"
-                >
-                  Book a demo
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
+                {user ? (
+                  <>
+                    <div className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45">
+                      Signed in as {user.name}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="mt-2 flex items-center justify-center gap-2 rounded-lg border border-white/15 px-3 py-2.5 text-center text-sm font-medium text-white/85 transition-colors hover:bg-white/5"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Log out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      to="/login"
+                      onClick={() => setMenuOpen(false)}
+                      className="rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/5 hover:text-white"
+                    >
+                      Log in
+                    </Link>
+                    <Link
+                      to="/signup"
+                      onClick={() => setMenuOpen(false)}
+                      className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-[#2f4bff] px-3 py-2.5 text-center text-sm font-medium text-white"
+                    >
+                      Get started
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           )}

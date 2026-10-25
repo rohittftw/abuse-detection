@@ -10,6 +10,12 @@ if (!HUGGINGFACE_API_TOKEN) {
 const ABUSE_MODEL_ID = 'cardiffnlp/twitter-roberta-base-hate-latest';
 const SENTIMENT_MODEL_ID = 'cardiffnlp/twitter-roberta-base-sentiment-latest';
 
+declare global {
+  // Round-robin index across the configured Twitter bearer tokens.
+  // eslint-disable-next-line no-var
+  var currentTokenIndex: number | undefined;
+}
+
 export const predictAbuse = async (text: string) => {
   try {
     console.log('Sending abuse detection request to Hugging Face:', {
@@ -114,6 +120,7 @@ export const fetchTweetsByHashtag = async (
   hashtag: string,
   maxResults: number = 10,
   saveToDb: boolean = true,
+  userId: string,
   sessionName?: string
 ) => {
   // Get multiple bearer tokens from environment variables
@@ -354,7 +361,7 @@ export const fetchTweetsByHashtag = async (
     if (saveToDb && successfulResults.length > 0) {
       try {
         console.log("Saving tweets and analysis to database...");
-        session = await TweetService.saveTweets(processedResponse, sessionName);
+        session = await TweetService.saveTweets(processedResponse, userId, sessionName);
         console.log(
           `✅ Saved ${successfulResults.length} tweets to database with session ID: ${session.sessionId}`
         );
@@ -408,27 +415,27 @@ export const fetchTweetsByHashtag = async (
 
 
 // New functions for database operations
-export const getTweetsFromDatabase = async (filters: any) => {
+export const getTweetsFromDatabase = async (filters: any, userId: string) => {
   try {
-    return await TweetService.getTweets(filters);
+    return await TweetService.getTweets(filters, userId);
   } catch (error) {
     console.error('Error fetching tweets from database:', error);
     throw new Error('Error fetching tweets from database');
   }
 };
 
-export const getAnalysisSessions = async (limit: number = 20) => {
+export const getAnalysisSessions = async (userId: string, limit: number = 20) => {
   try {
-    return await TweetService.getAnalysisSessions(limit);
+    return await TweetService.getAnalysisSessions(userId, limit);
   } catch (error) {
     console.error('Error fetching analysis sessions:', error);
     throw new Error('Error fetching analysis sessions');
   }
 };
 
-export const getDashboardStatistics = async () => {
+export const getDashboardStatistics = async (userId: string) => {
   try {
-    return await TweetService.getDashboardStats();
+    return await TweetService.getDashboardStats(userId);
   } catch (error) {
     console.error('Error fetching dashboard statistics:', error);
     throw new Error('Error fetching dashboard statistics');
@@ -436,27 +443,27 @@ export const getDashboardStatistics = async () => {
 };
 
 // New session-based functions
-export const getTweetsBySessionName = async (sessionName: string) => {
+export const getTweetsBySessionName = async (sessionName: string, userId: string) => {
   try {
-    return await TweetService.getTweetsBySessionName(sessionName);
+    return await TweetService.getTweetsBySessionName(sessionName, userId);
   } catch (error) {
     console.error('Error fetching tweets by session name:', error);
     throw new Error('Error fetching tweets by session name');
   }
 };
 
-export const getTweetsBySessionId = async (sessionId: string) => {
+export const getTweetsBySessionId = async (sessionId: string, userId: string) => {
   try {
-    return await TweetService.getTweetsBySessionId(sessionId);
+    return await TweetService.getTweetsBySessionId(sessionId, userId);
   } catch (error) {
     console.error('Error fetching tweets by session ID:', error);
     throw new Error('Error fetching tweets by session ID');
   }
 };
 
-export const getAllSessionNames = async () => {
+export const getAllSessionNames = async (userId: string) => {
   try {
-    return await TweetService.getSessionNames();
+    return await TweetService.getSessionNames(userId);
   } catch (error) {
     console.error('Error fetching session names:', error);
     throw new Error('Error fetching session names');
@@ -464,7 +471,7 @@ export const getAllSessionNames = async () => {
 };
 
 // Re-analyze a single tweet and store history
-export const reanalyzeTweet = async (tweet: any) => {
+export const reanalyzeTweet = async (tweet: any, userId: string) => {
   try {
     // Run new analysis
     const [sentimentResult, abuseResult] = await Promise.all([
@@ -491,9 +498,10 @@ export const reanalyzeTweet = async (tweet: any) => {
     };
 
     const updatedTweet = await Tweet.findOneAndUpdate(
-      { tweetId: tweet.tweetId },
+      { tweetId: tweet.tweetId, userId },
       {
-        $push: { analysisHistory: tweet.analysis }, // Store old analysis in history
+        // Keep only the 3 most recent analyses; history grows without bound otherwise.
+        $push: { analysisHistory: { $each: [tweet.analysis], $slice: -3 } },
         $set: { analysis: newAnalysis } // Set new analysis as current
       },
       { new: true } // Return the updated document
@@ -525,10 +533,10 @@ export const reanalyzeTweet = async (tweet: any) => {
 };
 
 // Re-analyze tweets from a session
-export const reanalyzeSessionTweets = async (sessionName: string) => {
+export const reanalyzeSessionTweets = async (sessionName: string, userId: string) => {
   try {
     // Get tweets from the session
-    const { tweets, session } = await TweetService.getTweetsBySessionName(sessionName);
+    const { tweets, session } = await TweetService.getTweetsBySessionName(sessionName, userId);
     
     if (!session || tweets.length === 0) {
       throw new Error('Session not found or no tweets available');
@@ -567,9 +575,9 @@ export const reanalyzeSessionTweets = async (sessionName: string) => {
 
           // Update the tweet in the database
           const updatedTweet = await Tweet.findOneAndUpdate(
-            { tweetId: tweet.tweetId },
+            { tweetId: tweet.tweetId, userId },
             {
-              $push: { analysisHistory: tweet.analysis },
+              $push: { analysisHistory: { $each: [tweet.analysis], $slice: -3 } },
               $set: { analysis: newAnalysis }
             },
             { new: true }

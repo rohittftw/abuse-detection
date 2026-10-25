@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { BadgeCheck, BarChart3, Heart, Link2, MessageCircle, Repeat2 } from "lucide-react";
 import AppLayout from "../../components/layout/AppLayout";
 import PageHeader from "../../components/home/PageHeader";
+import { API_ENDPOINTS, apiFetch } from "../../config/api";
 
 interface TweetAnalysis {
   id: string;
@@ -72,7 +73,7 @@ export const AnalysisPage = (): React.JSX.Element => {
     setError(null);
     
     try {
-      const response = await fetch('http://localhost:3001/api/fetch-tweets', {
+      const response = await apiFetch(API_ENDPOINTS.FETCH_TWEETS, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

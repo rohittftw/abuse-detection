@@ -1,25 +1,50 @@
-
-import './App.css'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { DetectionPage } from './screens/DetectionPage/DetectionPage'
 import { Hero } from './components/Hero'
 import { AboutPage } from './screens/AboutPage/AboutPage'
 import { AnalysisPage } from './screens/AnalysisPage/AnalysisPage'
 import { ReportsPage } from './screens/ReportsPage/ReportsPage'
+import { AuthPage } from './screens/AuthPage/AuthPage'
+import { AuthProvider } from './context/AuthContext'
+import { RequireAuth } from './components/auth/RequireAuth'
 
 function App() {
   return (
-    <BrowserRouter>
-      <div className="App">
+    <AuthProvider>
+      <BrowserRouter>
         <Routes>
           <Route path="/" element={<Hero />} />
-          <Route path="/detection" element={<DetectionPage />} />
+          <Route path="/login" element={<AuthPage />} />
+          <Route path="/signup" element={<AuthPage />} />
           <Route path="/about" element={<AboutPage />} />
-          <Route path="/analysis" element={<AnalysisPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
+          <Route
+            path="/detection"
+            element={
+              <RequireAuth>
+                <DetectionPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/analysis"
+            element={
+              <RequireAuth>
+                <AnalysisPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <RequireAuth>
+                <ReportsPage />
+              </RequireAuth>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </div>
-    </BrowserRouter>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 

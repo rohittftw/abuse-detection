@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BarChart3, MousePointerClick } from 'lucide-react';
 import AppLayout from '../../components/layout/AppLayout';
 import PageHeader from '../../components/home/PageHeader';
-import { API_ENDPOINTS } from '../../config/api';
+import { API_ENDPOINTS, apiFetch } from '../../config/api';
 
 type AnalysisSession = {
   sessionId: string;
@@ -33,7 +33,7 @@ export const ReportsPage = (): React.JSX.Element => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(API_ENDPOINTS.SESSIONS, {
+      const response = await apiFetch(API_ENDPOINTS.SESSIONS, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -58,7 +58,7 @@ export const ReportsPage = (): React.JSX.Element => {
     setLoadingTweets(true);
     setError(null);
     try {
-      const response = await fetch(API_ENDPOINTS.SESSION_TWEETS(sessionName), {
+      const response = await apiFetch(API_ENDPOINTS.SESSION_TWEETS(sessionName), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

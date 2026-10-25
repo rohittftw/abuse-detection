@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IAnalysisSession extends Document {
   sessionId: string;
+  userId: mongoose.Types.ObjectId; // Owner of this session
   sessionName: string; // User-friendly name for the session
   query: string;
   hashtag: string;
@@ -34,13 +35,16 @@ const AnalysisSessionSchema = new Schema<IAnalysisSession>({
   sessionId: {
     type: String,
     required: true,
-    unique: true,
-    index: true
+    unique: true
+  },
+  userId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
   sessionName: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   query: {
     type: String,
@@ -48,8 +52,7 @@ const AnalysisSessionSchema = new Schema<IAnalysisSession>({
   },
   hashtag: {
     type: String,
-    required: true,
-    index: true
+    required: true
   },
   maxResults: {
     type: Number,
@@ -59,15 +62,13 @@ const AnalysisSessionSchema = new Schema<IAnalysisSession>({
   },
   startedAt: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
   },
   completedAt: Date,
   status: {
     type: String,
     enum: ['pending', 'completed', 'failed'],
-    default: 'pending',
-    index: true
+    default: 'pending'
   },
   summary: {
     totalTweets: { type: Number, default: 0 },
@@ -92,5 +93,8 @@ const AnalysisSessionSchema = new Schema<IAnalysisSession>({
   timestamps: true,
   collection: 'analysis_sessions'
 });
+
+// Every session list/report query is scoped to one user, newest first.
+AnalysisSessionSchema.index({ userId: 1, startedAt: -1 });
 
 export const AnalysisSession = mongoose.model<IAnalysisSession>('AnalysisSession', AnalysisSessionSchema);

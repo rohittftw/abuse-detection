@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { Tweet, ITweet } from '../models/tweet';
 import { AnalysisSession, IAnalysisSession } from '../models/AnalysisSession';
 import { ProcessedTweet, ProcessedResponse } from '../types/twitter';
@@ -6,17 +7,18 @@ import { v4 as uuidv4 } from 'uuid';
 export class TweetService {
 
   // Save processed tweets to database
-  static async saveTweets(processedResponse: ProcessedResponse, sessionName?: string): Promise<IAnalysisSession> {
+  static async saveTweets(processedResponse: ProcessedResponse, userId: string, sessionName?: string): Promise<IAnalysisSession> {
     const sessionId = uuidv4();
     const startTime = Date.now();
 
     try {
       // Generate session name if not provided
-      const generatedSessionName = sessionName || this.generateSessionName(processedResponse.meta.query, processedResponse.query_info.hashtag);
+      const generatedSessionName = sessionName || this.generateSessionName(processedResponse.meta.query, processedResponse.query_info.hashtag, sessionId);
 
       // Create analysis session
       const session = new AnalysisSession({
         sessionId,
+        userId,
         sessionName: generatedSessionName,
         query: processedResponse.meta.query,
         hashtag: processedResponse.query_info.hashtag,
@@ -35,10 +37,12 @@ export class TweetService {
         try {
           const tweet = new Tweet({
             tweetId: processedTweet.id,
-            text: processedTweet.text,
+            // Hard cap keeps documents bounded even if the API returns long text.
+            text: processedTweet.text.slice(0, 280),
             createdAt: new Date(processedTweet.created_at),
             fetchedAt: new Date(),
             sessionId: sessionId, // Add session reference
+            userId,
             author: processedTweet.author,
             publicMetrics: {
               retweetCount: processedTweet.public_metrics.retweet_count || 0,
@@ -65,9 +69,10 @@ export class TweetService {
             }
           });
 
-          // Use upsert to avoid duplicates
+          // Upsert per user so two accounts can analyze the same tweet
+          // without overwriting each other's copy.
           return await Tweet.findOneAndUpdate(
-            { tweetId: processedTweet.id },
+            { tweetId: processedTweet.id, userId },
             tweet.toObject(),
             { upsert: true, new: true }
           );
@@ -112,9 +117,9 @@ export class TweetService {
     offset?: number;
     startDate?: Date;
     endDate?: Date;
-  }): Promise<{ tweets: ITweet[], total: number }> {
+  }, userId: string): Promise<{ tweets: ITweet[], total: number }> {
 
-    const query: any = {};
+    const query: any = { userId };
 
     if (filters.hashtag) {
       query.hashtags = { $in: [filters.hashtag] };
@@ -145,26 +150,28 @@ export class TweetService {
     return { tweets, total };
   }
 
-  // Get analysis sessions
-  static async getAnalysisSessions(limit: number = 20): Promise<IAnalysisSession[]> {
-    return await AnalysisSession.find()
+  // Get analysis sessions for one user
+  static async getAnalysisSessions(userId: string, limit: number = 20): Promise<IAnalysisSession[]> {
+    return await AnalysisSession.find({ userId })
       .sort({ startedAt: -1 })
       .limit(limit)
       .exec();
   }
 
-  // Get tweets by session name
-  static async getTweetsBySessionName(sessionName: string): Promise<{ tweets: ITweet[], session: IAnalysisSession | null }> {
+  // Get tweets by session name (scoped to the owner)
+  static async getTweetsBySessionName(sessionName: string, userId: string): Promise<{ tweets: ITweet[], session: IAnalysisSession | null }> {
     try {
-      // Find session by name
-      const session = await AnalysisSession.findOne({ sessionName }).exec();
+      // Session names can repeat (same hashtag + minute), so take the newest.
+      const session = await AnalysisSession.findOne({ sessionName, userId })
+        .sort({ startedAt: -1 })
+        .exec();
       
       if (!session) {
         return { tweets: [], session: null };
       }
 
       // Get tweets for this session
-      const tweets = await Tweet.find({ sessionId: session.sessionId })
+      const tweets = await Tweet.find({ sessionId: session.sessionId, userId })
         .sort({ createdAt: -1 })
         .exec();
 
@@ -175,18 +182,18 @@ export class TweetService {
     }
   }
 
-  // Get tweets by session ID
-  static async getTweetsBySessionId(sessionId: string): Promise<{ tweets: ITweet[], session: IAnalysisSession | null }> {
+  // Get tweets by session ID (scoped to the owner)
+  static async getTweetsBySessionId(sessionId: string, userId: string): Promise<{ tweets: ITweet[], session: IAnalysisSession | null }> {
     try {
       // Find session by ID
-      const session = await AnalysisSession.findOne({ sessionId }).exec();
+      const session = await AnalysisSession.findOne({ sessionId, userId }).exec();
       
       if (!session) {
         return { tweets: [], session: null };
       }
 
       // Get tweets for this session
-      const tweets = await Tweet.find({ sessionId })
+      const tweets = await Tweet.find({ sessionId, userId })
         .sort({ createdAt: -1 })
         .exec();
 
@@ -197,10 +204,10 @@ export class TweetService {
     }
   }
 
-  // Get all session names
-  static async getSessionNames(): Promise<{ sessionId: string, sessionName: string, query: string, hashtag: string, startedAt: Date, tweetCount: number }[]> {
+  // Get all session names for one user
+  static async getSessionNames(userId: string): Promise<{ sessionId: string, sessionName: string, query: string, hashtag: string, startedAt: Date, tweetCount: number }[]> {
     try {
-      const sessions = await AnalysisSession.find()
+      const sessions = await AnalysisSession.find({ userId })
         .sort({ startedAt: -1 })
         .select('sessionId sessionName query hashtag startedAt')
         .lean()
@@ -209,7 +216,10 @@ export class TweetService {
       // Get tweet counts for each session
       const sessionsWithCounts = await Promise.all(
         sessions.map(async (session) => {
-          const tweetCount = await Tweet.countDocuments({ sessionId: session.sessionId });
+          const tweetCount = await Tweet.countDocuments({
+            sessionId: session.sessionId,
+            userId,
+          });
           return {
             sessionId: session.sessionId,
             sessionName: session.sessionName,
@@ -228,8 +238,11 @@ export class TweetService {
     }
   }
 
-  // Get dashboard statistics
-  static async getDashboardStats(): Promise<any> {
+  // Get dashboard statistics for one user
+  static async getDashboardStats(userId: string): Promise<any> {
+    const owner = new Types.ObjectId(userId);
+    const ownerMatch = { userId: owner };
+
     const [
       totalTweets,
       highRiskTweets,
@@ -237,12 +250,14 @@ export class TweetService {
       riskDistribution,
       topHashtags
     ] = await Promise.all([
-      Tweet.countDocuments(),
-      Tweet.countDocuments({ 'analysis.riskLevel': 'high' }),
+      Tweet.countDocuments(ownerMatch),
+      Tweet.countDocuments({ ...ownerMatch, 'analysis.riskLevel': 'high' }),
       AnalysisSession.countDocuments({
+        ...ownerMatch,
         startedAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
       }),
       Tweet.aggregate([
+        { $match: ownerMatch },
         {
           $group: {
             _id: '$analysis.riskLevel',
@@ -251,6 +266,7 @@ export class TweetService {
         }
       ]),
       Tweet.aggregate([
+        { $match: ownerMatch },
         { $unwind: '$hashtags' },
         {
           $group: {
@@ -283,7 +299,7 @@ export class TweetService {
     return hashtags.map(tag => tag.substring(1).toLowerCase());
   }
 
-  private static generateSessionName(query: string, hashtag: string): string {
+  private static generateSessionName(query: string, hashtag: string, sessionId: string): string {
     const timestamp = new Date().toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -293,8 +309,12 @@ export class TweetService {
     
     // Clean up the hashtag for display
     const cleanHashtag = hashtag.replace(/[#\s]/g, '').toLowerCase();
+
+    // Short suffix keeps names unique when the same hashtag is analyzed twice
+    // in the same minute (for one user or across users).
+    const suffix = sessionId.replace(/-/g, '').slice(0, 4);
     
-    return `${cleanHashtag}_${timestamp}`;
+    return `${cleanHashtag}_${timestamp}_${suffix}`;
   }
 
   private static calculateSummary(tweets: ProcessedTweet[]) {
